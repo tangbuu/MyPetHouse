@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/item/cat_tree/cat_tree_3.png" id="tex"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(56, 32)
+
+[node name="CatTree" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.31, 0.31)
+texture = ExtResource("tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 40)
+shape = SubResource("shape")

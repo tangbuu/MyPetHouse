@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/item/toy/toy_2.png" id="tex"]
+
+[sub_resource type="CircleShape2D" id="shape"]
+radius = 9.0
+
+[node name="ToyBlue" type="RigidBody2D"]
+gravity_scale = 0.0
+linear_damp = 4.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("shape")

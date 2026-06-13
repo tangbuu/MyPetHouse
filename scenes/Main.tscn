@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://b6v4wc6ywuti0"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="main_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="hud"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("main_script")
+
+[node name="BG" type="ColorRect" parent="."]
+z_index = -10
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.69, 0.82, 0.89, 1)
+
+[node name="FadeOverlay" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Fade" type="ColorRect" parent="FadeOverlay"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0)
+mouse_filter = 2
+
+[node name="HUD" parent="." instance=ExtResource("hud")]
+visible = false

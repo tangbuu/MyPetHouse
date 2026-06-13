@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/item/plant/plant_1.png" id="tex"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(30, 22)
+
+[node name="SmallPlant" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.29, 0.29)
+texture = ExtResource("tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 42)
+shape = SubResource("shape")

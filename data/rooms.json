@@ -1,0 +1,10 @@
+{
+  "rooms": [
+    {
+      "id": "room_1",
+      "name": "Cozy Room",
+      "path": "res://data/rooms/room_1.json",
+      "unlocked": true
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/item/fountain/fountain_1.png" id="tex"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(42, 28)
+
+[node name="Fountain" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.29, 0.29)
+texture = ExtResource("tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 28)
+shape = SubResource("shape")

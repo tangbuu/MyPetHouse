@@ -1,0 +1,276 @@
+{
+  "background_color": [
+    0.69,
+    0.82,
+    0.89
+  ],
+  "background_image": "res://assets/bg/bg.jpg",
+  "center": [
+    0.0,
+    75.0
+  ],
+  "decorations": [
+    {
+      "name": "WallPicture",
+      "position": [
+        -160.1896,
+        -63.507122
+      ],
+      "scale": [
+        -0.33,
+        0.33
+      ],
+      "texture": "res://assets/item/window/window_2.png"
+    },
+    {
+      "name": "BackWallPicture",
+      "position": [
+        -63.507107,
+        -119.4313
+      ],
+      "scale": [
+        0.35144737,
+        0.30892682
+      ],
+      "texture": "res://assets/item/wall_deco/wall_deco_3.png"
+    },
+    {
+      "name": "Window",
+      "position": [
+        47.393368,
+        -109.00476
+      ],
+      "scale": [
+        0.33,
+        0.33
+      ],
+      "texture": "res://assets/item/window/window_1.png"
+    },
+    {
+      "name": "PlantPicture",
+      "position": [
+        113.74409,
+        -79.620865
+      ],
+      "scale": [
+        0.33,
+        0.33
+      ],
+      "texture": "res://assets/item/wall_deco/wall_deco_1.png"
+    }
+  ],
+  "id": "room_1",
+  "items": [
+    {
+      "name": "Shelf",
+      "position": [
+        -178.199,
+        21.801
+      ],
+      "scene": "res://scenes/items/Shelf.tscn"
+    },
+    {
+      "name": "SmallPlant",
+      "position": [
+        -166.825,
+        -26.54
+      ],
+      "scene": "res://scenes/items/SmallPlant.tscn"
+    },
+    {
+      "name": "LargePlant",
+      "position": [
+        -111.848,
+        -33.175
+      ],
+      "scene": "res://scenes/items/LargePlant.tscn"
+    },
+    {
+      "name": "CatTreeBig",
+      "position": [
+        155.119,
+        21.475
+      ],
+      "scene": "res://scenes/items/CatTree.tscn"
+    },
+    {
+      "name": "CatBed",
+      "position": [
+        -0.948,
+        -18.957
+      ],
+      "scene": "res://scenes/items/CatBed.tscn"
+    },
+    {
+      "name": "Fountain",
+      "position": [
+        86.182,
+        -0.284
+      ],
+      "scene": "res://scenes/items/Fountain.tscn"
+    },
+    {
+      "name": "ToyTeal",
+      "position": [
+        63.805,
+        -9.464
+      ],
+      "scene": "res://scenes/items/ToyTeal.tscn"
+    },
+    {
+      "name": "ToyBlue1",
+      "position": [
+        -109.005,
+        43.071
+      ],
+      "scene": "res://scenes/items/ToyBlue.tscn"
+    },
+    {
+      "name": "ToyBlue2",
+      "position": [
+        -114.692,
+        64.455
+      ],
+      "scene": "res://scenes/items/ToyBlue.tscn"
+    },
+    {
+      "name": "FoodBowl",
+      "position": [
+        -7.109,
+        150.237
+      ],
+      "scene": "res://scenes/items/FoodBowl.tscn"
+    },
+    {
+      "name": "WaterBowl",
+      "position": [
+        58.768,
+        128.91
+      ],
+      "scene": "res://scenes/items/WaterBowl.tscn"
+    }
+  ],
+  "pets": [
+    {
+      "bed_item": "CatBed",
+      "name": "Pet",
+      "position": [
+        270.0,
+        460.0
+      ],
+      "scene": "res://scenes/pet/Pet.tscn",
+      "standalone_anim": ""
+    },
+    {
+      "bed_item": "CatBed",
+      "name": "PetSofull",
+      "position": [
+        345.0,
+        555.0
+      ],
+      "scene": "res://scenes/pet/Pet.tscn",
+      "standalone_anim": ""
+    }
+  ],
+  "room_position": [
+    270.0,
+    480.0
+  ],
+  "room_scale": [
+    1.055,
+    1.055
+  ],
+  "room_texture": "res://assets/room/Room1.png",
+  "walls": [
+    {
+      "position": [
+        -123.0,
+        9.0
+      ],
+      "rotation": 2.634,
+      "size": [
+        284.0,
+        10.0
+      ]
+    },
+    {
+      "position": [
+        -123.0,
+        142.0
+      ],
+      "rotation": 0.476,
+      "size": [
+        279.0,
+        10.0
+      ]
+    },
+    {
+      "position": [
+        124.0,
+        142.0
+      ],
+      "rotation": -0.478,
+      "size": [
+        278.0,
+        10.0
+      ]
+    },
+    {
+      "position": [
+        124.0,
+        9.0
+      ],
+      "rotation": -2.632,
+      "size": [
+        283.0,
+        10.0
+      ]
+    }
+  ],
+  "zones": {
+    "floor": [
+      [
+        1.0,
+        -60.0
+      ],
+      [
+        -247.0,
+        78.0
+      ],
+      [
+        1.0,
+        206.0
+      ],
+      [
+        248.0,
+        78.0
+      ]
+    ],
+    "wall": [
+      [
+        1.0,
+        -229.0
+      ],
+      [
+        248.0,
+        -97.0
+      ],
+      [
+        248.0,
+        78.0
+      ],
+      [
+        1.0,
+        -60.0
+      ],
+      [
+        -247.0,
+        78.0
+      ],
+      [
+        -247.0,
+        -97.0
+      ]
+    ]
+  }
+}

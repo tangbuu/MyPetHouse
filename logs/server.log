@@ -1,0 +1,76 @@
+[INFO] 2026-06-12T11:12:38.565Z - Configuration loaded
+[INFO] 2026-06-12T11:12:38.569Z - Initializing Hugging Face Inference Client...
+[DEBUG] 2026-06-12T11:12:38.569Z - HF_TOKEN length: 37
+[DEBUG] 2026-06-12T11:12:38.569Z - HF_TOKEN first 4 chars: hf_g
+[INFO] 2026-06-12T11:12:38.570Z - Successfully initialized Hugging Face Inference Client
+[DEBUG] 2026-06-12T11:12:38.570Z - InferenceClient initialized successfully
+[INFO] 2026-06-12T11:12:38.570Z - Connecting to model space: your-username/InstantMesh...
+[INFO] 2026-06-12T11:12:38.570Z - Using HF token authentication
+[DEBUG] 2026-06-12T11:12:38.570Z - MODEL_SPACE environment variable: "your-username/InstantMesh"
+[DEBUG] 2026-06-12T11:12:38.570Z - MODEL_SPACE after default fallback: "your-username/InstantMesh"
+[DEBUG] 2026-06-12T11:12:38.571Z - Is MODEL_SPACE using default? false
+[DEBUG] 2026-06-12T11:12:38.571Z - Checking if space exists...
+[DEBUG] 2026-06-12T11:12:38.571Z - Checking space URL: https://huggingface.co/spaces/your-username/InstantMesh
+[DEBUG] 2026-06-12T11:12:39.076Z - Space exists check result: false (status: 401)
+[DEBUG] 2026-06-12T11:12:39.078Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/InstantMesh
+[DEBUG] 2026-06-12T11:12:39.435Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/instantmesh
+[DEBUG] 2026-06-12T11:12:40.008Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/Instantmesh
+[DEBUG] 2026-06-12T11:12:40.369Z - Creating connection promise for your-username/InstantMesh with token length 37
+[DEBUG] 2026-06-12T11:12:40.374Z - Starting connection attempt with 60 second timeout...
+[ERROR] 2026-06-12T11:12:40.742Z - Error connecting to model space: Space metadata could not be loaded. 
+[DEBUG] 2026-06-12T11:12:40.744Z - Error stack: Error: Space metadata could not be loaded. 
+    at process_endpoint (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:221:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Client._resolve_config (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2442:47)
+    at async Client.init (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2387:5)
+    at async Client.connect (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2426:5)
+    at async initializeClients (file:///Users/bin/Projects/game-asset-mcp/src/clients.js:162:29)
+    at async main (file:///Users/bin/Projects/game-asset-mcp/src/index.js:25:21)
+[ERROR] 2026-06-12T11:12:40.745Z - Error connecting to model space: Space metadata could not be loaded. 
+[ERROR] 2026-06-12T11:12:40.745Z - Error initializing Hugging Face Inference Client: Failed to connect to model space: Space metadata could not be loaded. 
+[DEBUG] 2026-06-12T11:12:40.746Z - Error stack: Error: Failed to connect to model space: Space metadata could not be loaded. 
+    at initializeClients (file:///Users/bin/Projects/game-asset-mcp/src/clients.js:211:13)
+    at async main (file:///Users/bin/Projects/game-asset-mcp/src/index.js:25:21)
+[ERROR] 2026-06-12T11:12:40.746Z - Initialization error: Failed to initialize Hugging Face Inference Client. Check your HF_TOKEN.
+[INFO] 2026-06-12T11:52:05.328Z - Configuration loaded
+[INFO] 2026-06-12T11:52:05.332Z - Initializing Hugging Face Inference Client...
+[DEBUG] 2026-06-12T11:52:05.334Z - HF_TOKEN length: 37
+[DEBUG] 2026-06-12T11:52:05.334Z - HF_TOKEN first 4 chars: hf_g
+[INFO] 2026-06-12T11:52:05.334Z - Successfully initialized Hugging Face Inference Client
+[DEBUG] 2026-06-12T11:52:05.335Z - InferenceClient initialized successfully
+[INFO] 2026-06-12T11:52:05.337Z - Connecting to model space: your-username/InstantMesh...
+[INFO] 2026-06-12T11:52:05.337Z - Using HF token authentication
+[DEBUG] 2026-06-12T11:52:05.337Z - MODEL_SPACE environment variable: "your-username/InstantMesh"
+[DEBUG] 2026-06-12T11:52:05.338Z - MODEL_SPACE after default fallback: "your-username/InstantMesh"
+[DEBUG] 2026-06-12T11:52:05.338Z - Is MODEL_SPACE using default? false
+[DEBUG] 2026-06-12T11:52:05.338Z - Checking if space exists...
+[DEBUG] 2026-06-12T11:52:05.338Z - Checking space URL: https://huggingface.co/spaces/your-username/InstantMesh
+[DEBUG] 2026-06-12T11:52:05.777Z - Space exists check result: false (status: 401)
+[DEBUG] 2026-06-12T11:52:05.779Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/InstantMesh
+[DEBUG] 2026-06-12T11:52:06.420Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/instantmesh
+[DEBUG] 2026-06-12T11:52:06.771Z - Checking alternative space URL: https://huggingface.co/spaces/your-username/Instantmesh
+[DEBUG] 2026-06-12T11:52:07.131Z - Creating connection promise for your-username/InstantMesh with token length 37
+[DEBUG] 2026-06-12T11:52:07.138Z - Starting connection attempt with 60 second timeout...
+[ERROR] 2026-06-12T11:52:07.513Z - Error connecting to model space: Space metadata could not be loaded. 
+[DEBUG] 2026-06-12T11:52:07.514Z - Error stack: Error: Space metadata could not be loaded. 
+    at process_endpoint (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:221:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Client._resolve_config (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2442:47)
+    at async Client.init (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2387:5)
+    at async Client.connect (file:///Users/bin/Projects/game-asset-mcp/node_modules/@gradio/client/dist/index.js:2426:5)
+    at async initializeClients (file:///Users/bin/Projects/game-asset-mcp/src/clients.js:163:29)
+    at async main (file:///Users/bin/Projects/game-asset-mcp/src/index.js:25:21)
+[WARN] 2026-06-12T11:52:07.514Z - 3D model space unavailable (Space metadata could not be loaded. ). 3D generation disabled; 2D still works.
+[INFO] 2026-06-12T11:52:07.515Z - MCP Game Asset Generator running with stdio transport
+[INFO] 2026-06-12T12:12:17.487Z - Configuration loaded
+[ERROR] 2026-06-12T12:12:17.490Z - HF_TOKEN is required in the .env file for 2D and 3D asset generation
+[ERROR] 2026-06-12T12:12:17.490Z - Initialization error: HF_TOKEN is required in the .env file for 2D and 3D asset generation
+[INFO] 2026-06-12T13:07:22.621Z - Configuration loaded
+[INFO] 2026-06-12T13:07:22.625Z - Initializing Hugging Face Inference Client...
+[DEBUG] 2026-06-12T13:07:22.625Z - HF_TOKEN length: 37
+[DEBUG] 2026-06-12T13:07:22.625Z - HF_TOKEN first 4 chars: hf_g
+[INFO] 2026-06-12T13:07:22.626Z - Successfully initialized Hugging Face Inference Client
+[DEBUG] 2026-06-12T13:07:22.626Z - InferenceClient initialized successfully
+[WARN] 2026-06-12T13:07:22.626Z - MODEL_SPACE "your-username/InstantMesh" is a placeholder. Skipping 3D init — 2D still works.
+[WARN] 2026-06-12T13:07:22.626Z - 3D model space unavailable (Placeholder MODEL_SPACE — 3D disabled). 3D generation disabled; 2D still works.
+[INFO] 2026-06-12T13:07:22.627Z - MCP Game Asset Generator running with stdio transport

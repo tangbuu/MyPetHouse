@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/pet/Pet.gd" id="script"]
+
+[sub_resource type="CircleShape2D" id="shape"]
+radius = 22.0
+
+[node name="Pet" type="CharacterBody2D"]
+script = ExtResource("script")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.28, 0.28)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 15)
+shape = SubResource("shape")
