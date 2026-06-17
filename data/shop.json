@@ -1,0 +1,144 @@
+{
+  "categories": [
+    {
+      "id": "room",
+      "label": "Room",
+      "type": "room_skin",
+      "items": [
+        { "id": "room_1", "name": "Default",    "texture": "res://assets/room/Room1.png", "price": 0,   "currency": "coin", "stock": 1 },
+        { "id": "room_2", "name": "Beach",       "texture": "res://assets/room/Room2.png", "price": 500, "currency": "coin", "stock": 1 },
+        { "id": "room_3", "name": "Strawberry",  "texture": "res://assets/room/Room3.png", "price": 500, "currency": "coin", "stock": 1 },
+        { "id": "room_4", "name": "Garden",      "texture": "res://assets/room/Room4.png", "price": 500, "currency": "coin", "stock": 1 },
+        { "id": "room_5", "name": "Mint",        "texture": "res://assets/room/Room5.png", "price": 5,   "currency": "gem",  "stock": 1 }
+      ]
+    },
+    {
+      "id": "cat_bed",
+      "label": "Beds",
+      "type": "furniture",
+      "scene": "res://scenes/items/CatBed.tscn",
+      "sceneName": "CatBed",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "bed_large_1", "name": "Bed 1", "texture": "res://assets/item/bed_large/bed_large_1.png", "price": 300, "currency": "coin", "stock": 2 },
+        { "id": "bed_large_2", "name": "Bed 2", "texture": "res://assets/item/bed_large/bed_large_2.png", "price": 400, "currency": "coin", "stock": 1 },
+        { "id": "bed_small_1", "name": "Bed 3", "texture": "res://assets/item/bed_small/bed_small_1.png", "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "bed_small_2", "name": "Bed 4", "texture": "res://assets/item/bed_small/bed_small_2.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "food_bowl",
+      "label": "Food Bowl",
+      "type": "furniture",
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/FoodBowl.gd",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "bowl_food_1",  "name": "Bowl F1", "texture": "res://assets/item/bowl/food/bowl_1.png",  "price": 100, "currency": "coin", "stock": -1 },
+        { "id": "bowl_food_2",  "name": "Bowl F2", "texture": "res://assets/item/bowl/food/bowl_2.png",  "price": 150, "currency": "coin", "stock": -1 },
+        { "id": "bowl_food_5",  "name": "Bowl F3", "texture": "res://assets/item/bowl/food/bowl_5.png",  "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "bowl_food_6",  "name": "Bowl F4", "texture": "res://assets/item/bowl/food/bowl_6.png",  "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "bowl_food_9",  "name": "Bowl F5", "texture": "res://assets/item/bowl/food/bowl_9.png",  "price": 250, "currency": "coin", "stock": -1 },
+        { "id": "bowl_food_10", "name": "Bowl F6", "texture": "res://assets/item/bowl/food/bowl_10.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "water_bowl",
+      "label": "Water Bowl",
+      "type": "furniture",
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/WaterBowl.gd",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "bowl_water_11", "name": "Bowl W1", "texture": "res://assets/item/bowl/water/bowl_11.png", "price": 100, "currency": "coin", "stock": -1 },
+        { "id": "bowl_water_3",  "name": "Bowl W2", "texture": "res://assets/item/bowl/water/bowl_3.png",  "price": 150, "currency": "coin", "stock": -1 },
+        { "id": "bowl_water_4",  "name": "Bowl W3", "texture": "res://assets/item/bowl/water/bowl_4.png",  "price": 150, "currency": "coin", "stock": -1 },
+        { "id": "bowl_water_7",  "name": "Bowl W4", "texture": "res://assets/item/bowl/water/bowl_7.png",  "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "bowl_water_8",  "name": "Bowl W5", "texture": "res://assets/item/bowl/water/bowl_8.png",  "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "bowl_water_12", "name": "Bowl W6", "texture": "res://assets/item/bowl/water/bowl_12.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "toy",
+      "label": "Toys",
+      "type": "furniture",
+      "scene": "res://scenes/items/Toy.tscn",
+      "sceneName": "Toy",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "toy_1", "name": "Toy 1", "texture": "res://assets/item/toy/toy_1.png", "price": 80,  "currency": "coin", "stock": 3 },
+        { "id": "toy_2", "name": "Toy 2", "texture": "res://assets/item/toy/toy_2.png", "price": 80,  "currency": "coin", "stock": -1 },
+        { "id": "toy_3", "name": "Toy 3", "texture": "res://assets/item/toy/toy_3.png", "price": 100, "currency": "coin", "stock": -1 },
+        { "id": "toy_4", "name": "Toy 4", "texture": "res://assets/item/toy/toy_4.png", "price": 100, "currency": "coin", "stock": -1 },
+        { "id": "toy_5", "name": "Toy 5", "texture": "res://assets/item/toy/toy_5.png", "price": 120, "currency": "coin", "stock": -1 },
+        { "id": "toy_6", "name": "Toy 6", "texture": "res://assets/item/toy/toy_6.png", "price": 120, "currency": "coin", "stock": -1 },
+        { "id": "toy_7", "name": "Toy 7", "texture": "res://assets/item/toy/toy_7.png", "price": 2,   "currency": "gem",  "stock": -1 },
+        { "id": "toy_8", "name": "Toy 8", "texture": "res://assets/item/toy/toy_8.png", "price": 2,   "currency": "gem",  "stock": -1 },
+        { "id": "toy_9", "name": "Toy 9", "texture": "res://assets/item/toy/toy_9.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "fountain",
+      "label": "Fountain",
+      "type": "furniture",
+      "scene": "res://scenes/items/Fountain.tscn",
+      "sceneName": "Fountain",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "fountain_1", "name": "Fountain 1", "texture": "res://assets/item/fountain/fountain_1.png", "price": 250, "currency": "coin", "stock": -1 },
+        { "id": "fountain_2", "name": "Fountain 2", "texture": "res://assets/item/fountain/fountain_2.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "cat_tree",
+      "label": "Cat Tree",
+      "type": "furniture",
+      "scene": "res://scenes/items/CatTree.tscn",
+      "sceneName": "CatTree",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "cat_tree_1", "name": "Tree 1", "texture": "res://assets/item/cat_tree/cat_tree_1.png", "price": 350, "currency": "coin", "stock": -1 },
+        { "id": "cat_tree_2", "name": "Tree 2", "texture": "res://assets/item/cat_tree/cat_tree_2.png", "price": 400, "currency": "coin", "stock": -1 },
+        { "id": "cat_tree_3", "name": "Tree 3", "texture": "res://assets/item/cat_tree/cat_tree_3.png", "price": 4,   "currency": "gem",  "stock": -1 }
+      ]
+    },
+    {
+      "id": "shelf",
+      "label": "Shelf",
+      "type": "furniture",
+      "scene": "res://scenes/items/Shelf.tscn",
+      "sceneName": "Shelf",
+      "preferred_surface": "floor",
+      "items": [
+        { "id": "shelf_1", "name": "Shelf 1", "texture": "res://assets/item/shelf/shelf_1.png", "price": 200, "currency": "coin", "stock": -1 }
+      ]
+    },
+    {
+      "id": "wall_deco",
+      "label": "Wall Deco",
+      "type": "furniture",
+      "preferred_surface": "",
+      "items": [
+        { "id": "wall_deco_1", "name": "Deco 1", "scene": "res://scenes/items/WallDecoBig.tscn", "sceneName": "WallDecoBig", "texture": "res://assets/item/wall_deco/walldecoBig/wall_deco_1.png", "price": 150, "currency": "coin", "stock": -1 },
+        { "id": "wall_deco_2", "name": "Deco 2", "scene": "res://scenes/items/WallDecoMid.tscn", "sceneName": "WallDecoMid", "texture": "res://assets/item/wall_deco/walldecosamll/wall_deco_2.png", "price": 150, "currency": "coin", "stock": -1 },
+        { "id": "wall_deco_3", "name": "Deco 3", "scene": "res://scenes/items/WallDecoMid.tscn", "sceneName": "WallDecoMid", "texture": "res://assets/item/wall_deco/walldecosamll/wall_deco_3.png", "price": 200, "currency": "coin", "stock": -1 }
+      ]
+    },
+    {
+      "id": "window",
+      "label": "Windows",
+      "type": "furniture",
+      "scene": "res://scenes/items/Window.tscn",
+      "sceneName": "Window",
+      "preferred_surface": "",
+      "items": [
+        { "id": "window_1", "name": "Window 1", "texture": "res://assets/item/window/window_1.png", "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "window_2", "name": "Window 2", "texture": "res://assets/item/window/window_2.png", "price": 200, "currency": "coin", "stock": -1 },
+        { "id": "window_3", "name": "Window 3", "texture": "res://assets/item/window/window_3.png", "price": 250, "currency": "coin", "stock": -1 },
+        { "id": "window_4", "name": "Window 4", "texture": "res://assets/item/window/window_4.png", "price": 3,   "currency": "gem",  "stock": -1 }
+      ]
+    }
+  ]
+}

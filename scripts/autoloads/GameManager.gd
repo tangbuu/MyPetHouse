@@ -17,8 +17,9 @@ func _process(delta: float) -> void:
 	stats.tick(delta, is_sleeping)
 
 	stats_changed.emit("hunger",    stats.hunger)
-	stats_changed.emit("happiness", stats.happiness)
+	stats_changed.emit("thirst",    stats.thirst)
 	stats_changed.emit("energy",    stats.energy)
+	stats_changed.emit("happiness", stats.happiness)
 
 	_update_state(delta)
 
@@ -42,6 +43,10 @@ func _update_state(delta: float) -> void:
 
 func feed() -> void:
 	stats.apply_feed()
+	_set_override(PetStateMachine.State.HAPPY, 2.0)
+
+func water() -> void:
+	stats.apply_water()
 	_set_override(PetStateMachine.State.HAPPY, 2.0)
 
 func pet_action() -> void:

@@ -1,16 +1,17 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c8c6hv727ey7h"]
 
-[ext_resource type="Texture2D" path="res://assets/item/plant/plant_1.png" id="tex"]
+[ext_resource type="Texture2D" uid="uid://dq582j2vhqdh5" path="res://assets/item/plant/plant_1.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(30, 22)
+size = Vector2(11.5, 5.699998)
 
-[node name="SmallPlant" type="StaticBody2D"]
+[node name="SmallPlant" type="StaticBody2D" unique_id=1640825181]
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.29, 0.29)
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=309513755]
+scale = Vector2(0.203, 0.203)
 texture = ExtResource("tex")
+offset = Vector2(0, -38.85)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 42)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1796928599]
+position = Vector2(0.25, -2.150001)
 shape = SubResource("shape")

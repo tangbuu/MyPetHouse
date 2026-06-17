@@ -9,150 +9,19 @@
     0.0,
     75.0
   ],
-  "decorations": [
-    {
-      "name": "WallPicture",
-      "position": [
-        -160.1896,
-        -63.507122
-      ],
-      "scale": [
-        -0.33,
-        0.33
-      ],
-      "texture": "res://assets/item/window/window_2.png"
-    },
-    {
-      "name": "BackWallPicture",
-      "position": [
-        -63.507107,
-        -119.4313
-      ],
-      "scale": [
-        0.35144737,
-        0.30892682
-      ],
-      "texture": "res://assets/item/wall_deco/wall_deco_3.png"
-    },
-    {
-      "name": "Window",
-      "position": [
-        47.393368,
-        -109.00476
-      ],
-      "scale": [
-        0.33,
-        0.33
-      ],
-      "texture": "res://assets/item/window/window_1.png"
-    },
-    {
-      "name": "PlantPicture",
-      "position": [
-        113.74409,
-        -79.620865
-      ],
-      "scale": [
-        0.33,
-        0.33
-      ],
-      "texture": "res://assets/item/wall_deco/wall_deco_1.png"
-    }
-  ],
+  "decorations": [],
+  "grid": {
+    "floor_cols": 18.0,
+    "floor_rows": 18.0,
+    "wall_cols": 18.0,
+    "wall_rows": 12.0
+  },
   "id": "room_1",
-  "items": [
-    {
-      "name": "Shelf",
-      "position": [
-        -178.199,
-        21.801
-      ],
-      "scene": "res://scenes/items/Shelf.tscn"
-    },
-    {
-      "name": "SmallPlant",
-      "position": [
-        -166.825,
-        -26.54
-      ],
-      "scene": "res://scenes/items/SmallPlant.tscn"
-    },
-    {
-      "name": "LargePlant",
-      "position": [
-        -111.848,
-        -33.175
-      ],
-      "scene": "res://scenes/items/LargePlant.tscn"
-    },
-    {
-      "name": "CatTreeBig",
-      "position": [
-        155.119,
-        21.475
-      ],
-      "scene": "res://scenes/items/CatTree.tscn"
-    },
-    {
-      "name": "CatBed",
-      "position": [
-        -0.948,
-        -18.957
-      ],
-      "scene": "res://scenes/items/CatBed.tscn"
-    },
-    {
-      "name": "Fountain",
-      "position": [
-        86.182,
-        -0.284
-      ],
-      "scene": "res://scenes/items/Fountain.tscn"
-    },
-    {
-      "name": "ToyTeal",
-      "position": [
-        63.805,
-        -9.464
-      ],
-      "scene": "res://scenes/items/ToyTeal.tscn"
-    },
-    {
-      "name": "ToyBlue1",
-      "position": [
-        -109.005,
-        43.071
-      ],
-      "scene": "res://scenes/items/ToyBlue.tscn"
-    },
-    {
-      "name": "ToyBlue2",
-      "position": [
-        -114.692,
-        64.455
-      ],
-      "scene": "res://scenes/items/ToyBlue.tscn"
-    },
-    {
-      "name": "FoodBowl",
-      "position": [
-        -7.109,
-        150.237
-      ],
-      "scene": "res://scenes/items/FoodBowl.tscn"
-    },
-    {
-      "name": "WaterBowl",
-      "position": [
-        58.768,
-        128.91
-      ],
-      "scene": "res://scenes/items/WaterBowl.tscn"
-    }
-  ],
+  "items": [],
   "pets": [
     {
       "bed_item": "CatBed",
+      "cat_name": "Bin",
       "name": "Pet",
       "position": [
         270.0,
@@ -163,6 +32,7 @@
     },
     {
       "bed_item": "CatBed",
+      "cat_name": "Miu",
       "name": "PetSofull",
       "position": [
         345.0,
@@ -180,7 +50,7 @@
     1.055,
     1.055
   ],
-  "room_texture": "res://assets/room/Room1.png",
+  "room_texture": "res://assets/room/Room5.png",
   "walls": [
     {
       "position": [

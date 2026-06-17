@@ -1,16 +1,17 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cl511ufu8c3q5"]
 
-[ext_resource type="Texture2D" path="res://assets/item/cat_tree/cat_tree_3.png" id="tex"]
+[ext_resource type="Texture2D" uid="uid://cfw2flf0hbstq" path="res://assets/item/cat_tree/cat_tree_3.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(56, 32)
+size = Vector2(39.2, 24.5)
 
-[node name="CatTree" type="StaticBody2D"]
+[node name="CatTree" type="StaticBody2D" unique_id=99512441]
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.31, 0.31)
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1710900412]
+scale = Vector2(0.217, 0.217)
 texture = ExtResource("tex")
+offset = Vector2(0, -123.9)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 40)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=356749862]
+position = Vector2(1, -4)
 shape = SubResource("shape")

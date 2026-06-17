@@ -1,16 +1,11 @@
 [gd_scene format=3 uid="uid://b3r8qmx2t6wj1"]
 
-[ext_resource type="Texture2D" uid="uid://cbhoxsufx06w3" path="res://assets/room/Room1.png" id="2_liqgt"]
 [ext_resource type="Script" uid="uid://c6s6e4gtvfhlo" path="res://scripts/Room.gd" id="script"]
 
 [node name="Room" type="Node2D" unique_id=1781405327]
 position = Vector2(270, 480)
 scale = Vector2(1.055, 1.055)
 script = ExtResource("script")
-
-[node name="RoomSprite" type="Sprite2D" parent="." unique_id=1961219117]
-z_index = -2
-texture = ExtResource("2_liqgt")
 
 [node name="Center" type="Marker2D" parent="." unique_id=209196427]
 position = Vector2(-0.94786745, 61.611374)

@@ -8,10 +8,12 @@ class_name Room
 		if Engine.is_editor_hint() and is_node_ready():
 			_editor_rebuild()
 
-@onready var _room_sprite : Sprite2D  = $RoomSprite
-@onready var _center      : Marker2D  = $Center
+@onready var _center : Marker2D = $Center
 
-var _item_map : Dictionary = {}
+var _item_map     : Dictionary = {}
+var _object_grid  : Dictionary = {}
+var grid_system   : RoomGridSystem = null
+var _grid_overlay : Node2D         = null
 
 var center_world : Vector2:
 	get: return _center.global_position if _center else global_position
@@ -21,11 +23,13 @@ func _ready() -> void:
 		_editor_rebuild()
 
 func _editor_rebuild() -> void:
-	# Remove previously built dynamic children
 	for child in get_children():
-		if child == _center or child == _room_sprite: continue
+		if child == _center: continue
 		child.free()
 	_item_map.clear()
+	_object_grid.clear()
+	grid_system   = null
+	_grid_overlay = null
 
 	if room_data_path == "" or not FileAccess.file_exists(room_data_path): return
 	var file := FileAccess.open(room_data_path, FileAccess.READ)
@@ -38,11 +42,34 @@ func _editor_rebuild() -> void:
 func build(data: Dictionary) -> void:
 	position = _v2(data["room_position"])
 	scale    = _v2(data["room_scale"])
+	_center.position = _v2(data.get("center", [0, 75]))
 
-	_room_sprite.texture = load(data["room_texture"])
-	_center.position     = _v2(data.get("center", [0, 75]))
+	# ── Room background ──────────────────────────────────────────────────────
+	if data.has("room_layers"):
+		var layers : Dictionary = data["room_layers"]
+		var z_map := {"floor": -4, "wall_left": -3, "wall_right": -2}
+		for key in ["floor", "wall_left", "wall_right"]:
+			if not layers.has(key): continue
+			var spr     := Sprite2D.new()
+			spr.name     = "Layer_" + key
+			spr.z_index  = z_map[key]
+			spr.texture  = load(layers[key])
+			add_child(spr)
+	elif data.has("room_texture"):
+		var spr     := Sprite2D.new()
+		spr.name     = "Layer_room"
+		spr.z_index  = -2
+		spr.texture  = load(data["room_texture"])
+		add_child(spr)
 
-	for dec: Dictionary in data.get("decorations", []):
+	# ── Grid system ───────────────────────────────────────────────────────────
+	grid_system = RoomGridSystem.new()
+	grid_system.name = "GridSystem"
+	add_child(grid_system)
+	grid_system.setup(data)
+
+	# ── Decorations ───────────────────────────────────────────────────────────
+	for dec : Dictionary in data.get("decorations", []):
 		var spr     := Sprite2D.new()
 		spr.name     = dec["name"]
 		spr.position = _v2(dec["position"])
@@ -50,28 +77,126 @@ func build(data: Dictionary) -> void:
 		spr.texture  = load(dec["texture"])
 		add_child(spr)
 
-	for item: Dictionary in data.get("items", []):
-		var node     := (load(item["scene"]) as PackedScene).instantiate()
-		node.name     = item["name"]
-		node.position = _v2(item["position"])
-		add_child(node)
-		_item_map[item["name"]] = node
+	# ── Object grid definitions ───────────────────────────────────────────────
+	# objectGrid.json format: { "w_d_h": ["SceneName", ...] }
+	# Build reverse map: sceneName → {w, d, h}
+	var og_file := FileAccess.open("res://data/objectGrid.json", FileAccess.READ)
+	if og_file:
+		var og = JSON.parse_string(og_file.get_as_text())
+		og_file.close()
+		if og is Dictionary:
+			for size_key in og:
+				var parts := (size_key as String).split("_")
+				if parts.size() != 3: continue
+				var def := {"w": int(parts[0]), "d": int(parts[1]), "h": int(parts[2])}
+				for sname in og[size_key]:
+					_object_grid[sname] = def
 
-	for w: Dictionary in data.get("walls", []):
-		var wall      := StaticBody2D.new()
-		wall.position  = _v2(w["position"])
-		wall.rotation  = float(w["rotation"])
-		var col        := CollisionShape2D.new()
+	# ── Items ─────────────────────────────────────────────────────────────────
+	for item : Dictionary in data.get("items", []):
+		var node : Node
+		if item.has("scene"):
+			node = (load(item["scene"]) as PackedScene).instantiate()
+		else:
+			continue
+		# Inject script before add_child so _ready() runs with correct script
+		if item.has("script"):
+			node.set_script(load(item["script"]))
+		# Inject texture/scale if specified (for generic scenes like WallDeco, Bowl, Toy)
+		if item.has("texture"):
+			for child in node.get_children():
+				if child is Sprite2D:
+					(child as Sprite2D).texture = load(item["texture"])
+					if item.has("sprite_scale"):
+						(child as Sprite2D).scale = _v2(item["sprite_scale"])
+					break
+		node.name = item["name"]
+		add_child(node)
+		_item_map[node.name] = node
+		node.set_meta("item_id", item.get("id", item["name"]))
+
+		# Look up grid dimensions from objectGrid.json by sceneName
+		var og_def : Dictionary = _object_grid.get(item.get("sceneName", ""), {})
+		var gw    : int     = og_def.get("w", item.get("grid_w", 1))
+		var gd    : int     = og_def.get("d", item.get("grid_d", 1))
+		var gh    : int     = og_def.get("h", item.get("grid_h", 0))
+		var gsurf : String  = item.get("grid_surface", "")
+		node.set_meta("grid_w",       gw)
+		node.set_meta("grid_d",       gd)
+		node.set_meta("grid_h",       gh)
+		node.set_meta("place_offset", Vector2.ZERO)
+		if gsurf != "":
+			node.set_meta("preferred_surface", gsurf)
+
+		var node2d := node as Node2D
+		if node2d == null:
+			continue
+
+		if gsurf != "" and item.has("grid_col") and item.has("grid_row"):
+			grid_system.place_item(node2d, gsurf, item["grid_col"], item["grid_row"], gw, gd, gh)
+			for child in node2d.get_children():
+				if child is CollisionShape2D:
+					node2d.position -= (child as CollisionShape2D).position
+					break
+		else:
+			node2d.position = _v2(item.get("position", [0.0, 0.0]))
+
+		if item.has("scale_x"):
+			node2d.scale.x = float(item["scale_x"])
+
+	# ── Grid overlay ─────────────────────────────────────────────────────────
+	var grid := Node2D.new()
+	grid.name    = "GridOverlay"
+	grid.z_index = 0
+	grid.visible = false
+	grid.set_script(load("res://scripts/RoomGrid.gd"))
+	add_child(grid)
+	grid.call("setup", data)
+	_grid_overlay = grid
+
+	# ── Walls ─────────────────────────────────────────────────────────────────
+	for w : Dictionary in data.get("walls", []):
+		var wall     := StaticBody2D.new()
+		wall.position = _v2(w["position"])
+		wall.rotation = float(w["rotation"])
+		var col       := CollisionShape2D.new()
 		col.shape      = RectangleShape2D.new()
 		(col.shape as RectangleShape2D).size = _v2(w["size"])
 		wall.add_child(col)
 		add_child(wall)
 
-func get_item(name: String) -> Node:
-	return _item_map.get(name, null)
+# ── Public API ────────────────────────────────────────────────────────────────
+
+func get_item(item_name: String) -> Node:
+	return _item_map.get(item_name, null)
+
+func register_item(item_name: String, node: Node) -> void:
+	_item_map[item_name] = node
+
+func unregister_item(item_name: String) -> void:
+	_item_map.erase(item_name)
 
 func item_names() -> Array:
 	return _item_map.keys()
+
+func placed_item_ids() -> Array:
+	var ids := []
+	for node in _item_map.values():
+		if is_instance_valid(node) and node.has_meta("item_id"):
+			ids.append(node.get_meta("item_id"))
+		else:
+			ids.append(node.name)
+	return ids
+
+func set_highlight(quads, valid: bool) -> void:
+	if _grid_overlay:
+		_grid_overlay.call("set_highlight", quads, valid)
+
+func clear_highlight() -> void:
+	if _grid_overlay:
+		_grid_overlay.call("clear_highlight")
+
+# ── Util ──────────────────────────────────────────────────────────────────────
 
 func _v2(a: Array) -> Vector2:
 	return Vector2(float(a[0]), float(a[1]))

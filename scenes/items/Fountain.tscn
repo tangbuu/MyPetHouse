@@ -1,16 +1,17 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dweg8jxd3mdua"]
 
-[ext_resource type="Texture2D" path="res://assets/item/fountain/fountain_1.png" id="tex"]
+[ext_resource type="Texture2D" uid="uid://daxxi0l4ecou1" path="res://assets/item/fountain/fountain_1.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(42, 28)
+size = Vector2(32, 25.8)
 
-[node name="Fountain" type="StaticBody2D"]
+[node name="Fountain" type="StaticBody2D" unique_id=873888153]
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.29, 0.29)
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1160318830]
+scale = Vector2(0.203, 0.203)
 texture = ExtResource("tex")
+offset = Vector2(0, -89.25)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 28)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1384513230]
+position = Vector2(-4.7683716e-07, -8.1)
 shape = SubResource("shape")

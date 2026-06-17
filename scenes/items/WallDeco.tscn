@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://ddvuwtarmeita"]
+
+[ext_resource type="Texture2D" uid="uid://cfcmk8k8tuqpi" path="res://assets/item/window/window_1.png" id="tex"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(60, 93)
+
+[node name="WallDeco" type="StaticBody2D" unique_id=1993732872]
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1866618917]
+scale = Vector2(0.33, 0.33)
+texture = ExtResource("tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1070871293]
+position = Vector2(0, -1.5)
+shape = SubResource("shape")

@@ -2,34 +2,28 @@ extends HBoxContainer
 class_name StatBar
 
 @export var stat_name: String = "hunger"
-@export var icon_text: String = "🍔"
-@export var bar_color: Color = Color(1.0, 0.6, 0.2)
+@export var fill_texture: Texture2D
 
-@onready var icon_label: Label = $Icon
-@onready var bar: ProgressBar = $Bar
+@onready var bar: TextureProgressBar = $Bar
+
+const BAR_BG := preload("res://assets/UI/bars/bar_bg.png")
+
+var _watched_pet = null
 
 func _ready() -> void:
-	icon_label.text = icon_text
-	_style_bar()
+	bar.texture_under    = BAR_BG
+	bar.texture_progress = fill_texture
+	bar.fill_mode        = TextureProgressBar.FILL_LEFT_TO_RIGHT
 	GameManager.stats_changed.connect(_on_stats_changed)
 
-func _style_bar() -> void:
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = bar_color
-	fill.corner_radius_top_left    = 4
-	fill.corner_radius_top_right   = 4
-	fill.corner_radius_bottom_left = 4
-	fill.corner_radius_bottom_right = 4
-	bar.add_theme_stylebox_override("fill", fill)
+func watch_pet(pet) -> void:
+	_watched_pet = pet
 
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.2, 0.2, 0.2, 0.6)
-	bg.corner_radius_top_left    = 4
-	bg.corner_radius_top_right   = 4
-	bg.corner_radius_bottom_left = 4
-	bg.corner_radius_bottom_right = 4
-	bar.add_theme_stylebox_override("background", bg)
+func _process(_delta: float) -> void:
+	if _watched_pet and is_instance_valid(_watched_pet):
+		bar.value = float(_watched_pet.get(stat_name)) * 100.0
 
 func _on_stats_changed(changed_stat: String, value: float) -> void:
+	if _watched_pet: return
 	if changed_stat == stat_name:
-		bar.value = value
+		bar.value = value * 100.0

@@ -1,37 +1,37 @@
 extends CharacterBody2D
 class_name Pet
 
-const IDLE_DIR   := "res://assets/cat/blackCat/idle/idel_1/"
-const IDLE_DIRS := [
-	"res://assets/cat/blackCat/idle/idel_2/",
-	"res://assets/cat/blackCat/idle/idel_3/",
-	"res://assets/cat/blackCat/idle/idel_4/",
-	"res://assets/cat/blackCat/idle/idel_5/",
-	"res://assets/cat/blackCat/idle/idel_6/",
-]
-const IDLE_COUNTS := [5, 4, 5, 4, 5]
+const IDLE2_SHEET  := "res://assets/cat/sheets/idle2_sheet.png"
+const IDLE3_SHEET  := "res://assets/cat/sheets/idle3_sheet.png"
+const IDLE4_SHEET  := "res://assets/cat/sheets/idle4_sheet.png"
+const IDLE6_SHEET  := "res://assets/cat/sheets/idle6_sheet.png"
+const TIRED_SHEET  := "res://assets/cat/sheets/tired_sheet.png"
 
-const DRINK_DIR := "res://assets/cat/blackCat/drink/"
-const WALK_DIR   := "res://assets/cat/blackCat/walk/"
-const TIRED_DIR  := "res://assets/cat/blackCat/tired/"
-const EAT_DIR    := "res://assets/cat/blackCat/eat/"
-const CRY_DIR    := "res://assets/cat/blackCat/cry/"
-const SLEEP_DIR  := "res://assets/cat/blackCat/sleep/"
-const SOFULL_IMG := "res://assets/cat/blackCat/sofull/sofull_nobg.png"
-const FRAME_COUNT := 4
-const MOVE_SPEED  := 45.0
+const DRINK_DIR := "res://assets/cat/drink/"
+const SOFULL_IMG      := "res://assets/cat/sofull/sofull_nobg.png"
+const WALK_SIDE_SHEET := "res://assets/cat/sheets/walk_side_sheet.png"
+const WALK_DOWN_SHEET := "res://assets/cat/sheets/walk_down_sheet.png"
+const WALK_UP_SHEET   := "res://assets/cat/sheets/walk_up_sheet.png"
+const EAT_SHEET   := "res://assets/cat/sheets/eat_sheet.png"
+const SLEEP_SHEET := "res://assets/cat/sheets/sleep_sheet.png"
+const FRAME_COUNT  := 4
+const MOVE_SPEED   := 45.0
+const ARRIVE_DIST  := 15.0
 
-const HUNGER_DECAY      := 0.0015  # per second → full drain ~11 min
-const HUNGER_EAT_GAIN   := 1.0     # restored per eat session
-const THIRST_DECAY      := 0.0020  # per second → full drain ~8 min
-const THIRST_DRINK_GAIN := 1.0     # restored per drink session
-const ENERGY_DECAY      := 0.0008  # per second → full drain ~20 min
-const ENERGY_SLEEP_GAIN := 0.003   # per second while sleeping
+const HUNGER_DECAY      := 0.0015
+const HUNGER_EAT_GAIN   := 1.0
+const THIRST_DECAY      := 0.0020
+const THIRST_DRINK_GAIN := 1.0
+const ENERGY_DECAY      := 0.0008
+const ENERGY_SLEEP_GAIN := 0.003
 
 @export var bed_node       : Node2D = null
 @export var food_bowl      : Node2D = null
 @export var water_bowl     : Node2D = null
 @export var standalone_anim: String = ""
+@export var cat_name       : String = "Cat"
+
+signal clicked(pet: Pet)
 
 @onready var sprite: AnimatedSprite2D = $Sprite
 
@@ -40,7 +40,6 @@ var _spawn_pos    : Vector2
 var _target_pos   : Vector2
 var _on_arrive    : Callable = Callable()
 var _arrive_dist  : float    = 52.0
-var _idle_timer   : float    = 0.0
 var _current_state: int      = -1
 var _move_dir     : Vector2  = Vector2.ZERO
 var _wander_timer : float    = 0.0
@@ -54,25 +53,15 @@ var _stuck_pos          : Vector2  = Vector2.ZERO
 var _nav_to_bed         : bool     = false
 var _cat_bump_cooldown  : float    = 0.0
 
-# ── Hunger (0.0–1.0): depletes over time, restored by eating ──────────────────
-# > 0.65  → active   < 0.3 → go eat
 var hunger : float = 1.0
-
-# ── Thirst (0.0–1.0): depletes over time, restored by drinking ────────────────
-# < 0.3 → go drink
 var thirst : float = 1.0
-
-# ── Energy (0.0–1.0): depletes over time, restored by sleeping ────────────────
-# < 0.3 → go sleep
 var energy : float = 1.0
 
-# ── Personality ───────────────────────────────────────────────────────────────
 var _laziness    : float
 var _playfulness : float
 var _affection   : float
 var _curiosity   : float
 
-# ── Social ────────────────────────────────────────────────────────────────────
 var _other_pets   : Array   = []
 var _floor_center : Vector2 = Vector2.ZERO
 
@@ -86,33 +75,71 @@ func _ready() -> void:
 	_affection   = randf()
 	_curiosity   = randf()
 	_setup_frames()
+	GameManager.state_changed.connect(_on_state_changed)
+	_on_state_changed(GameManager.current_state)
 	if standalone_anim != "":
 		_play(standalone_anim)
 		return
-	if not GameManager.state_changed.is_connected(_on_state_changed):
-		GameManager.state_changed.connect(_on_state_changed)
-	_on_state_changed(GameManager.current_state)
-	_idle_timer = randf_range(1.0, 3.0)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var local: Vector2 = get_global_transform().affine_inverse() * event.global_position
+		if local.length() < 40.0:
+			clicked.emit(self)
+			get_viewport().set_input_as_handled()
 
 func _setup_frames() -> void:
 	var frames := SpriteFrames.new()
-	_add_anim(frames, "idle", IDLE_DIR, "idle", 6, 3.0)
-	for i in range(IDLE_DIRS.size()):
-		_add_anim(frames, "idle%d" % (i + 2), IDLE_DIRS[i], "idle", IDLE_COUNTS[i], 3.0, false)
-	_add_anim(frames, "walk",     WALK_DIR,  "walk",  6,           8.0)
-	_add_anim(frames, "tired",    TIRED_DIR, "tired", 6,           5.0, false)
-	_add_anim(frames, "cry",      CRY_DIR,   "cry",   FRAME_COUNT, 4.0)
-	_add_anim(frames, "sleeping", SLEEP_DIR, "sleep", FRAME_COUNT, 2.0)
-	_add_anim_frames(frames, "eat_start",   EAT_DIR,   "eat",   [1,2,3,4],             3.0, false)
-	_add_anim_frames(frames, "eat_loop",    EAT_DIR,   "eat",   [2,3,4],               3.0, true)
-	_add_anim_frames(frames, "eat_end",     EAT_DIR,   "eat",   [5],                   2.0, false)
-	_add_anim_frames(frames, "drink_start", DRINK_DIR, "drink", [1,2,3,4],          4.0, false)
-	_add_anim_frames(frames, "drink_loop",  DRINK_DIR, "drink", [5,6,7],             4.0, true)
-	_add_anim_frames(frames, "drink_end",   DRINK_DIR, "drink", [8],                 4.0, false)
+	_add_anim_sheet(frames, "idle",  TIRED_SHEET, 6, 1, 6, 3.0, false)
+	_add_anim_sheet(frames, "idle3", IDLE3_SHEET, 4, 1, 4, 3.0, false)
+	_add_anim_sheet(frames, "idle4", IDLE4_SHEET, 5, 1, 5, 3.0, false)
+	_add_anim_sheet(frames, "idle6", IDLE6_SHEET, 5, 1, 5, 3.0, false)
+	_add_anim_sheet(frames, "walk_side", WALK_SIDE_SHEET, 4, 2, 6, 6.0)
+	_add_anim_sheet(frames, "walk_down", WALK_DOWN_SHEET, 8, 1, 7, 6.0, true, [2, 5])
+	_add_anim_sheet(frames, "walk_up",   WALK_UP_SHEET,   3, 3, 7, 6.0, true, [2, 3, 5])
+	_add_anim_sheet_range(frames, "eat_start", EAT_SHEET, 3, 3, 0, 3, 3.0, false)
+	_add_anim_sheet_range(frames, "eat_loop",  EAT_SHEET, 3, 3, 3, 6, 3.0, true)
+	_add_anim_sheet_range(frames, "eat_end",   EAT_SHEET, 3, 3, 6, 8, 2.0, false)
+	_add_anim_sheet_range(frames, "drink_start", EAT_SHEET, 3, 3, 0, 3, 3.0, false)
+	_add_anim_sheet_range(frames, "drink_loop",  EAT_SHEET, 3, 3, 3, 6, 3.0, true)
+	_add_anim_sheet_range(frames, "drink_end",   EAT_SHEET, 3, 3, 6, 8, 2.0, false)
+	_add_anim_sheet_range(frames, "sleep_prepare", SLEEP_SHEET, 3, 3, 0, 3, 3.0, false)
+	_add_anim_sheet_range(frames, "sleeping",      SLEEP_SHEET, 3, 3, 3, 5, 2.0, true)
+	_add_anim_sheet_range(frames, "sleep_done",    SLEEP_SHEET, 3, 3, 6, 9, 3.0, false)
 	frames.add_animation("sofull")
 	frames.set_animation_loop("sofull", false)
 	frames.add_frame("sofull", load(SOFULL_IMG))
 	sprite.sprite_frames = frames
+
+func _add_anim_sheet(frames: SpriteFrames, anim: String, path: String,
+					  hf: int, vf: int, n: int, fps: float, loop: bool = true, skip: Array = []) -> void:
+	frames.add_animation(anim)
+	frames.set_animation_loop(anim, loop)
+	frames.set_animation_speed(anim, fps)
+	var tex: Texture2D = load(path)
+	var cw := float(tex.get_width())  / hf
+	var ch := float(tex.get_height()) / vf
+	for i in range(n):
+		if i in skip: continue
+		var atlas := AtlasTexture.new()
+		atlas.atlas  = tex
+		atlas.region = Rect2((i % hf) * cw, (i / hf) * ch, cw, ch)
+		frames.add_frame(anim, atlas)
+
+func _add_anim_sheet_range(frames: SpriteFrames, anim: String, path: String,
+						   hf: int, vf: int, from_i: int, to_i: int,
+						   fps: float, loop: bool = true) -> void:
+	frames.add_animation(anim)
+	frames.set_animation_loop(anim, loop)
+	frames.set_animation_speed(anim, fps)
+	var tex: Texture2D = load(path)
+	var cw := float(tex.get_width())  / hf
+	var ch := float(tex.get_height()) / vf
+	for i in range(from_i, to_i):
+		var atlas := AtlasTexture.new()
+		atlas.atlas  = tex
+		atlas.region = Rect2((i % hf) * cw, (i / hf) * ch, cw, ch)
+		frames.add_frame(anim, atlas)
 
 func _add_anim(frames: SpriteFrames, anim: String, dir: String,
 			   prefix: String, n: int, fps: float, loop: bool = true) -> void:
@@ -122,30 +149,23 @@ func _add_anim(frames: SpriteFrames, anim: String, dir: String,
 	for i: int in range(1, n + 1):
 		frames.add_frame(anim, load(dir + prefix + "_%d.png" % i))
 
-func _add_anim_frames(frames: SpriteFrames, anim: String, dir: String,
-					  prefix: String, indices: Array, fps: float, loop: bool) -> void:
-	frames.add_animation(anim)
-	frames.set_animation_loop(anim, loop)
-	frames.set_animation_speed(anim, fps)
-	for i in indices:
-		frames.add_frame(anim, load(dir + prefix + "_%d.png" % i))
-
 # ── Physics ───────────────────────────────────────────────────────────────────
 
 func _physics_process(delta: float) -> void:
 	if standalone_anim != "": return
 	_tick_stats(delta)
 	_cat_bump_cooldown = maxf(_cat_bump_cooldown - delta, 0.0)
-	# Urgent needs interrupt wandering immediately
+
+	# Urgent needs: interrupt wander only, let idle signal drive behavior
 	if not _on_arrive.is_valid() and not _is_eating and not _is_drinking:
-		if hunger < 0.3 or thirst < 0.3 or energy < 0.3:
+		if (hunger < 0.3 or thirst < 0.3 or energy < 0.3) and _move_dir != Vector2.ZERO:
 			_move_dir     = Vector2.ZERO
 			_wander_timer = 0.0
-			_idle_timer   = 0.0
+			velocity      = Vector2.ZERO
 
 	var speed_mult := lerpf(0.45, 1.0, clampf(hunger / 0.65, 0.0, 1.0))
 
-	# ── Purposeful movement (eat, drink, sleep, follow) ──────────────────────
+	# ── Purposeful movement ───────────────────────────────────────────────────
 	if _on_arrive.is_valid():
 		var diff := _target_pos - global_position
 		if diff.length() < maxf(_arrive_dist, 2.0) or (_detour_timer <= 0.0 and diff.length() < _arrive_dist * 1.5) or _detour_count >= 3:
@@ -158,7 +178,6 @@ func _physics_process(delta: float) -> void:
 			_on_arrive = Callable()
 			cb.call()
 		else:
-			# Stuck detection: every 0.5s check if barely moved
 			_stuck_timer -= delta
 			if _stuck_timer <= 0.0:
 				if global_position.distance_to(_stuck_pos) < 6.0 and _detour_timer <= 0.0:
@@ -167,7 +186,6 @@ func _physics_process(delta: float) -> void:
 						_on_arrive  = Callable()
 						_play("sofull")
 						return
-					# Close enough but blocked by another cat — just arrive
 					if diff.length() < _arrive_dist * 2.0:
 						velocity = Vector2.ZERO
 						_move_dir = Vector2.ZERO
@@ -201,9 +219,7 @@ func _physics_process(delta: float) -> void:
 				_detour_timer = 1.0
 				_detour_count += 1
 
-			var move_ref := _detour_dir if _detour_timer > 0.0 else diff
 			_set_move_anim(true)
-			sprite.flip_h = move_ref.x < 0
 			z_index = int(global_position.y)
 		return
 
@@ -226,22 +242,17 @@ func _physics_process(delta: float) -> void:
 			_cat_bump_cooldown = 1.0
 
 		_set_move_anim(true)
-		sprite.flip_h = _move_dir.x < 0
 		z_index = int(global_position.y)
 		return
 
-	# ── Idle ──────────────────────────────────────────────────────────────────
+	# ── Idle ─────────────────────────────────────────────────────────────────
 	velocity = Vector2.ZERO
-	z_index = int(global_position.y)
+	z_index  = int(global_position.y)
 	if _is_eating or _is_drinking: return
-	_idle_timer -= delta
-	if _idle_timer <= 0.0:
-		_do_natural_behavior()
-		return
 	var cur_anim: String = sprite.animation if sprite.sprite_frames else ""
-	if cur_anim in ["sleeping", "sofull"]: return
-	if cur_anim in ["idle", "idle2", "idle3", "idle4", "idle5", "idle6", "tired"]: return
-	_set_move_anim(false)
+	if cur_anim in ["sleeping", "sofull", "sleep_prepare", "sleep_done"]: return
+	if cur_anim in ["idle", "idle3", "idle4", "idle6"]: return
+	_play_idle()
 
 # ── Energy ────────────────────────────────────────────────────────────────────
 
@@ -250,7 +261,9 @@ func _tick_stats(delta: float) -> void:
 	if anim in ["sleeping", "sofull"]:
 		energy = minf(energy + ENERGY_SLEEP_GAIN * delta, 1.0)
 		if energy >= 0.95 and _current_state != PetStateMachine.State.SLEEPING:
-			_start_wander(randf_range(1.0, 2.0))
+			_play("sleep_done")
+			if not sprite.animation_finished.is_connected(_on_sleep_done_finished):
+				sprite.animation_finished.connect(_on_sleep_done_finished)
 	else:
 		energy = maxf(energy - ENERGY_DECAY * delta, 0.0)
 	hunger = maxf(hunger - HUNGER_DECAY * delta, 0.0)
@@ -270,12 +283,10 @@ func _water_bowl_has_water() -> bool:
 
 func _do_natural_behavior() -> void:
 	if _current_state == PetStateMachine.State.SLEEPING:
-		_idle_timer = randf_range(4.0, 8.0)
 		return
 
 	var cur_anim: String = sprite.animation if sprite.sprite_frames else ""
 	if cur_anim == "sleeping" and energy < 0.95:
-		_idle_timer = randf_range(3.0, 6.0)
 		return
 
 	if energy < 0.3:
@@ -293,7 +304,6 @@ func _do_natural_behavior() -> void:
 	else:
 		_decide_hunger()
 
-# High energy → lots of options
 func _decide_active() -> void:
 	var w := {}
 	w["idle"]   = 0.3 + _laziness  * 0.2
@@ -316,7 +326,6 @@ func _decide_active() -> void:
 		"bother": _bother_cat(sleeping_others[0])
 		_:        _play_random_idle()
 
-# Medium energy → calm, limited options
 func _decide_calm() -> void:
 	var w := {}
 	w["idle"]   = 0.3 + _laziness  * 0.2
@@ -333,34 +342,40 @@ func _decide_calm() -> void:
 		"follow": _go_near_cat(active_others[randi() % active_others.size()])
 		_:        _play_random_idle()
 
-# Low thirst → drink
+func _bowl_arrive_pos(bowl: Node2D) -> Vector2:
+	var spot := bowl.get_node_or_null("ArriveSpot") as Node2D
+	return spot.global_position if spot else bowl.global_position
+
 func _decide_thirst() -> void:
 	if _water_bowl_has_water():
 		water_bowl.set("collision_layer", 0)
-		_move_to(water_bowl.global_position)
-		_arrive_dist = 35.0
+		_move_to(_bowl_arrive_pos(water_bowl))
+		_arrive_dist = ARRIVE_DIST
 		_on_arrive = func(): water_bowl.start_drink(self)
 	else:
-		_play("tired")
-		_idle_timer = randf_range(3.0, 6.0)
+		_play_idle()
 
-# Low hunger → eat
 func _decide_hunger() -> void:
 	if _food_bowl_has_food():
 		food_bowl.set("collision_layer", 0)
-		_move_to(food_bowl.global_position)
-		_arrive_dist = 35.0
+		_move_to(_bowl_arrive_pos(food_bowl))
+		_arrive_dist = ARRIVE_DIST
 		_on_arrive = func(): food_bowl.start_feed(self)
 	else:
-		_play("tired")
-		_idle_timer = randf_range(3.0, 6.0)
+		_play_idle()
 
-# Low energy → sleep
 func _decide_sleep() -> void:
 	if bed_node and _bed_is_free():
 		_go_to_bed()
 	else:
 		_play("sofull")
+		if not sprite.animation_finished.is_connected(_on_sofull_done):
+			sprite.animation_finished.connect(_on_sofull_done)
+
+func _on_sofull_done() -> void:
+	if sprite.animation != "sofull": return
+	sprite.animation_finished.disconnect(_on_sofull_done)
+	get_tree().create_timer(2.0).timeout.connect(func(): _do_natural_behavior())
 
 func _bed_is_free() -> bool:
 	if not bed_node: return false
@@ -370,9 +385,13 @@ func _bed_is_free() -> bool:
 		if not is_instance_valid(p): continue
 		var other := p as Pet
 		if other == null: continue
+		# Another pet is already heading to this bed
+		if other._nav_to_bed and other.bed_node == bed_node:
+			return false
+		# Another pet is already sleeping/preparing at this bed
 		if other.global_position.distance_to(dest) < 40.0:
 			var anim: String = other.sprite.animation if other.sprite.sprite_frames else ""
-			if anim in ["sleeping", "sofull"]:
+			if anim in ["sleeping", "sofull", "sleep_prepare"]:
 				return false
 	return true
 
@@ -412,7 +431,8 @@ func _move_to(world_pos: Vector2, wait_after: float = 0.0) -> void:
 	_stuck_timer  = 0.5
 	_stuck_pos    = global_position
 	if wait_after > 0.0:
-		_on_arrive = func(): _idle_timer = wait_after
+		_on_arrive = func(): get_tree().create_timer(wait_after).timeout.connect(
+			func(): _do_natural_behavior())
 
 # ── State handling ────────────────────────────────────────────────────────────
 
@@ -421,19 +441,14 @@ func _on_state_changed(new_state: int) -> void:
 	var anim: String = sprite.animation if sprite.sprite_frames else ""
 	if anim in ["eat_start", "eat_loop", "eat_end", "drink_start", "drink_loop", "drink_end", "sleeping", "sofull"]:
 		return
-	if _on_arrive.is_valid():
+	if _on_arrive.is_valid() or _move_dir != Vector2.ZERO:
 		return
 	_kill_tween()
 	_on_arrive = Callable()
 	match new_state:
-		PetStateMachine.State.IDLE, PetStateMachine.State.HAPPY:
-			_play("idle")
-			_idle_timer = randf_range(1.0, 3.0)
-		PetStateMachine.State.TIRED:
-			_play("tired")
-			_idle_timer = randf_range(1.0, 2.0)
-		PetStateMachine.State.HUNGRY:
-			_idle_timer = randf_range(1.0, 2.0)
+		PetStateMachine.State.IDLE, PetStateMachine.State.HAPPY, \
+		PetStateMachine.State.TIRED, PetStateMachine.State.HUNGRY:
+			_play_idle()
 		PetStateMachine.State.SLEEPING:
 			_go_to_bed()
 
@@ -444,13 +459,27 @@ func _go_to_bed() -> void:
 		var sleep_spot := bed_node.get_node_or_null("SleepSpot") as Node2D
 		var dest       := sleep_spot.global_position if sleep_spot else bed_node.global_position
 		_move_to(dest)
-		_arrive_dist = 0.0
+		_arrive_dist = ARRIVE_DIST
 		_nav_to_bed  = true
 		_on_arrive   = func():
 			_nav_to_bed = false
-			_play("sleeping")
+			_play("sleep_prepare")
+			if not sprite.animation_finished.is_connected(_on_sleep_prepare_done):
+				sprite.animation_finished.connect(_on_sleep_prepare_done)
 	else:
-		_play("sleeping")
+		_play("sleep_prepare")
+		if not sprite.animation_finished.is_connected(_on_sleep_prepare_done):
+			sprite.animation_finished.connect(_on_sleep_prepare_done)
+
+func _on_sleep_prepare_done() -> void:
+	if sprite.animation != "sleep_prepare": return
+	sprite.animation_finished.disconnect(_on_sleep_prepare_done)
+	_play("sleeping")
+
+func _on_sleep_done_finished() -> void:
+	if sprite.animation != "sleep_done": return
+	sprite.animation_finished.disconnect(_on_sleep_done_finished)
+	_start_wander(randf_range(1.0, 2.0))
 
 # ── Eat ───────────────────────────────────────────────────────────────────────
 
@@ -505,24 +534,40 @@ func _on_drink_end_done() -> void:
 	_is_drinking = false
 	_start_wander(randf_range(1.0, 2.0))
 
-# ── Random idle ───────────────────────────────────────────────────────────────
+# ── Idle animations ───────────────────────────────────────────────────────────
+
+func _disconnect_idle_signals() -> void:
+	if sprite.animation_finished.is_connected(_on_idle_done):
+		sprite.animation_finished.disconnect(_on_idle_done)
+	if sprite.animation_finished.is_connected(_on_idle_anim_done):
+		sprite.animation_finished.disconnect(_on_idle_anim_done)
+
+func _play_idle() -> void:
+	_disconnect_idle_signals()
+	sprite.play("idle")
+	sprite.scale = Vector2(_BASE_SCALE, _BASE_SCALE)
+	sprite.animation_finished.connect(_on_idle_done)
+
+func _on_idle_done() -> void:
+	if sprite.animation != "idle": return
+	sprite.animation_finished.disconnect(_on_idle_done)
+	_do_natural_behavior()
 
 func _play_random_idle(exclude: String = "") -> void:
-	var anims := ["idle2", "idle3", "idle4", "idle5", "idle6"]
+	var anims := ["idle3", "idle4", "idle6"]
 	if exclude != "":
 		anims = anims.filter(func(a): return a != exclude)
-	_play(anims[randi() % anims.size()])
-	_idle_timer = randf_range(4.0, 8.0)
-	if not sprite.animation_finished.is_connected(_on_idle_anim_done):
-		sprite.animation_finished.connect(_on_idle_anim_done)
+	var picked: String = anims[randi() % anims.size()]
+	_disconnect_idle_signals()
+	sprite.play(picked)
+	sprite.scale = Vector2(_BASE_SCALE, _BASE_SCALE)
+	sprite.animation_finished.connect(_on_idle_anim_done)
 
 func _on_idle_anim_done() -> void:
 	var finished := sprite.animation
-	if finished not in ["idle2", "idle3", "idle4", "idle5", "idle6"]: return
+	if finished not in ["idle3", "idle4", "idle6"]: return
 	sprite.animation_finished.disconnect(_on_idle_anim_done)
-	var prev := finished
-	get_tree().create_timer(0.3).timeout.connect(func():
-		_idle_timer = 0.0)
+	get_tree().create_timer(0.3).timeout.connect(func(): _do_natural_behavior())
 
 # ── Animations ────────────────────────────────────────────────────────────────
 
@@ -534,11 +579,19 @@ func _play(anim: String) -> void:
 	sprite.scale = Vector2(_BASE_SCALE, _BASE_SCALE)
 
 func _set_move_anim(moving: bool) -> void:
-	_play("walk" if moving else _current_idle_anim())
+	if not moving:
+		_play(_current_idle_anim())
+		return
+	var vel := velocity
+	if abs(vel.y) > abs(vel.x):
+		_play("walk_down" if vel.y > 0 else "walk_up")
+		sprite.flip_h = false
+	else:
+		_play("walk_side")
+		sprite.flip_h = vel.x < 0
 
 func _current_idle_anim() -> String:
 	if _current_state == PetStateMachine.State.SLEEPING: return "sleeping"
-	if hunger < 0.3: return "tired"
 	return "idle"
 
 func _jump() -> void:

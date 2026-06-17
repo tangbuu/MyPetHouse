@@ -1,16 +1,17 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://0bssg7f7u86e"]
 
-[ext_resource type="Texture2D" path="res://assets/item/wall_deco/wall_deco_4.png" id="tex"]
+[ext_resource type="Texture2D" uid="uid://bjm0y7la8ojtw" path="res://assets/item/shelf/shelf_1.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(75, 38)
+size = Vector2(62.125, 26.6)
 
-[node name="Shelf" type="StaticBody2D"]
+[node name="Shelf" type="StaticBody2D" unique_id=1831945578]
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.3, 0.3)
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1813810833]
+scale = Vector2(0.21, 0.21)
 texture = ExtResource("tex")
+offset = Vector2(0, -140)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 50)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=816369325]
+position = Vector2(-0.0625, -3)
 shape = SubResource("shape")

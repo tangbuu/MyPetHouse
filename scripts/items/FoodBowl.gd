@@ -12,10 +12,9 @@ var _feeding_pets : Array = []
 var _eat_timer    : float = 0.0
 
 @onready var _sprite : Sprite2D = $Sprite2D
-@onready var _area   : Area2D   = $Area2D
 
 func _ready() -> void:
-	_area.input_event.connect(_on_input_event)
+	input_event.connect(_on_input_event)
 	_update_visual()
 
 func _process(delta: float) -> void:

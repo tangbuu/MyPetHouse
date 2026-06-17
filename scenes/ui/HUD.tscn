@@ -1,69 +1,260 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/UIButton.gd" id="11"]
+[ext_resource type="Script" path="res://scripts/ui/UIStyledButton.gd" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatBar.tscn" id="2"]
+[ext_resource type="Texture2D" path="res://assets/UI/avatar/avatar_frame.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/UI/bars/bar_fill_red.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/UI/bars/bar_fill_blue.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/UI/icons/coin_icon.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/UI/icons/gem_icon.png" id="7"]
+[ext_resource type="FontFile" path="res://assets/fonts/Jersey_25/Jersey25-Regular.ttf" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ShopPanel.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/BagPanel.tscn" id="13"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_widget"]
+bg_color = Color(1.0, 0.91, 0.86, 0.95)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_width_left = 2
+border_color = Color(0.76, 0.62, 0.55, 1.0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rightbg"]
+bg_color = Color(0.99, 0.88, 0.81, 1.0)
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_currency"]
+bg_color = Color(1.0, 0.91, 0.86, 0.95)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_width_left = 2
+border_color = Color(0.76, 0.62, 0.55, 1.0)
+content_margin_left = 17.0
+content_margin_right = 6.0
+content_margin_top = 0.0
+content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_plusbtn"]
+bg_color = Color(0.76, 0.62, 0.55, 1.0)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_right = 2.0
+content_margin_top = 0.0
+content_margin_bottom = 0.0
+
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1")
 
-[node name="Panel" type="PanelContainer" parent="."]
-anchors_preset = 12
-anchor_left = 0.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -220.0
-offset_bottom = 0.0
-grow_vertical = 0
+[node name="StatsWidget" type="PanelContainer" parent="."]
+anchors_preset = 0
+offset_left = 10.0
+offset_top = 10.0
+scale = Vector2(1.5, 1.5)
+grow_horizontal = 1
+grow_vertical = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_widget")
 
-[node name="Margin" type="MarginContainer" parent="Panel"]
+[node name="Row" type="HBoxContainer" parent="StatsWidget"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 10
+theme_override_constants/separation = 0
 
-[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+[node name="Avatar" type="TextureRect" parent="StatsWidget/Row"]
+custom_minimum_size = Vector2(52, 52)
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RightCol" type="VBoxContainer" parent="StatsWidget/Row"]
 layout_mode = 2
-theme_override_constants/separation = 8
+custom_minimum_size = Vector2(40, 0)
+size_flags_horizontal = 0
+size_flags_vertical = 4
+theme_override_constants/separation = 2
 
-[node name="Stats" type="VBoxContainer" parent="Panel/Margin/VBox"]
+[node name="BarsArea" type="PanelContainer" parent="StatsWidget/Row/RightCol"]
 layout_mode = 2
-theme_override_constants/separation = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_rightbg")
 
-[node name="HungerBar" parent="Panel/Margin/VBox/Stats" instance=ExtResource("2")]
+[node name="BarsMargin" type="MarginContainer" parent="StatsWidget/Row/RightCol/BarsArea"]
+layout_mode = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 2
+
+[node name="BarsVBox" type="VBoxContainer" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HungerBar" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox" instance=ExtResource("2")]
 layout_mode = 2
 stat_name = "hunger"
-icon_text = "🍔"
-bar_color = Color(1.0, 0.55, 0.18, 1.0)
+fill_texture = ExtResource("4")
 
-[node name="HappinessBar" parent="Panel/Margin/VBox/Stats" instance=ExtResource("2")]
-layout_mode = 2
-stat_name = "happiness"
-icon_text = "💛"
-bar_color = Color(0.98, 0.85, 0.12, 1.0)
-
-[node name="EnergyBar" parent="Panel/Margin/VBox/Stats" instance=ExtResource("2")]
+[node name="EnergyBar" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox" instance=ExtResource("2")]
 layout_mode = 2
 stat_name = "energy"
-icon_text = "⚡"
-bar_color = Color(0.20, 0.78, 0.40, 1.0)
+fill_texture = ExtResource("5")
 
-[node name="Buttons" type="HBoxContainer" parent="Panel/Margin/VBox"]
+[node name="CatName" type="Label" parent="StatsWidget/Row/RightCol"]
 layout_mode = 2
-theme_override_constants/separation = 8
+text = "BIN"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.42, 0.26, 0.16, 1.0)
+theme_override_fonts/font = ExtResource("9")
 
-[node name="FeedBtn" type="Button" parent="Panel/Margin/VBox/Buttons"]
-size_flags_horizontal = 3
-text = "🍔 Feed"
-theme_override_font_sizes/font_size = 20
+[node name="CurrencyContainer" type="HBoxContainer" parent="."]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -10.0
+offset_top = 10.0
+offset_right = -10.0
+grow_horizontal = 0
+grow_vertical = 1
+theme_override_constants/separation = 14
 
-[node name="PetBtn" type="Button" parent="Panel/Margin/VBox/Buttons"]
-size_flags_horizontal = 3
-text = "🤝 Pet"
-theme_override_font_sizes/font_size = 20
+[node name="CoinWidget" type="Control" parent="CurrencyContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(88, 27)
 
-[node name="SleepBtn" type="Button" parent="Panel/Margin/VBox/Buttons"]
+[node name="CoinPanel" type="PanelContainer" parent="CurrencyContainer/CoinWidget"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = 0.0
+offset_bottom = 0.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_currency")
+
+[node name="CoinContent" type="HBoxContainer" parent="CurrencyContainer/CoinWidget/CoinPanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="CoinAmount" type="Label" parent="CurrencyContainer/CoinWidget/CoinPanel/CoinContent"]
+layout_mode = 2
 size_flags_horizontal = 3
-text = "💤 Sleep"
-theme_override_font_sizes/font_size = 20
+size_flags_vertical = 4
+text = "999"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_fonts/font = ExtResource("9")
+theme_override_colors/font_color = Color(0.42, 0.26, 0.16, 1.0)
+
+[node name="CoinBtn" type="Button" parent="CurrencyContainer/CoinWidget/CoinPanel/CoinContent"]
+layout_mode = 2
+script = ExtResource("11")
+custom_minimum_size = Vector2(14, 14)
+size_flags_vertical = 4
+size_flags_horizontal = 0
+symbol = "+"
+font_size = 11
+corner_radius = 3
+
+[node name="CoinIcon" type="TextureRect" parent="CurrencyContainer/CoinWidget"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 26.0
+offset_bottom = 26.0
+z_index = 1
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="GemWidget" type="Control" parent="CurrencyContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(88, 27)
+
+[node name="GemPanel" type="PanelContainer" parent="CurrencyContainer/GemWidget"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = 0.0
+offset_bottom = 0.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_currency")
+
+[node name="GemContent" type="HBoxContainer" parent="CurrencyContainer/GemWidget/GemPanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="GemAmount" type="Label" parent="CurrencyContainer/GemWidget/GemPanel/GemContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+text = "99"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_fonts/font = ExtResource("9")
+theme_override_colors/font_color = Color(0.42, 0.26, 0.16, 1.0)
+
+[node name="GemBtn" type="Button" parent="CurrencyContainer/GemWidget/GemPanel/GemContent"]
+layout_mode = 2
+script = ExtResource("11")
+custom_minimum_size = Vector2(14, 14)
+size_flags_vertical = 4
+size_flags_horizontal = 0
+symbol = "+"
+font_size = 11
+corner_radius = 3
+
+[node name="GemIcon" type="TextureRect" parent="CurrencyContainer/GemWidget"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 26.0
+offset_bottom = 26.0
+z_index = 1
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BottomButtons" type="HBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -52.0
+offset_right = 100.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="ShopBtn" type="Button" parent="BottomButtons"]
+script = ExtResource("12")
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+text = "SHOP"
+
+[node name="BagBtn" type="Button" parent="BottomButtons"]
+script = ExtResource("12")
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+text = "BAG"
+
+[node name="ShopPanel" parent="." instance=ExtResource("10")]
+
+[node name="BagPanel" parent="." instance=ExtResource("13")]

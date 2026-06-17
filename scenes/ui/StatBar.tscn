@@ -3,19 +3,12 @@
 [ext_resource type="Script" path="res://scripts/ui/StatBar.gd" id="1"]
 
 [node name="StatBar" type="HBoxContainer"]
-custom_minimum_size = Vector2(0, 36)
+custom_minimum_size = Vector2(0, 8)
 script = ExtResource("1")
 
-[node name="Icon" type="Label" parent="."]
-custom_minimum_size = Vector2(42, 0)
-text = "🍔"
-horizontal_alignment = 1
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 22
-
-[node name="Bar" type="ProgressBar" parent="."]
+[node name="Bar" type="TextureProgressBar" parent="."]
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 28)
+size_flags_vertical = 4
+custom_minimum_size = Vector2(0, 8)
 max_value = 100.0
 value = 80.0
-show_percentage = false

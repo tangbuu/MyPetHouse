@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://b4rsv53nxp5rq"]
+
+[ext_resource type="Texture2D" uid="uid://d2yujjjj4jlx1" path="res://assets/item/toy/toy_2.png" id="tex"]
+
+[sub_resource type="CircleShape2D" id="shape"]
+radius = 6.3
+
+[node name="Toy" type="RigidBody2D" unique_id=1011460263]
+gravity_scale = 0.0
+linear_damp = 4.0
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=941668037]
+scale = Vector2(0.21, 0.21)
+texture = ExtResource("tex")
+offset = Vector2(0, -25.2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1609597377]
+position = Vector2(0, -5)
+shape = SubResource("shape")

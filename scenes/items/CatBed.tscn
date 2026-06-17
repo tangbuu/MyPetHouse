@@ -2,11 +2,19 @@
 
 [ext_resource type="Texture2D" uid="uid://p63pa8ri1l0l" path="res://assets/item/bed_small/bed_small_1.png" id="tex"]
 
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(75.8, 57)
+
 [node name="CatBed" type="Node2D" unique_id=593975425]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1184990324]
-scale = Vector2(0.33, 0.33)
+scale = Vector2(0.231, 0.231)
 texture = ExtResource("tex")
+offset = Vector2(0, -94.5)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=119647177]
+position = Vector2(-0.099999994, -21.5)
+shape = SubResource("shape")
 
 [node name="SleepSpot" type="Marker2D" parent="." unique_id=1285591880]
-position = Vector2(1, -26)
+position = Vector2(0, -52)

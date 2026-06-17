@@ -1,0 +1,11 @@
+{
+  "4_4_1": ["CatBed"],
+  "2_2_3": ["CatTree", "LargePlant"],
+  "1_1_2": ["SmallPlant"],
+  "2_3_4": ["Shelf"],
+  "1_1_0": ["Toy"],
+  "2_2_1": ["Fountain", "Bowl"],
+  "5_0_5": ["Window"],
+  "3_0_5": ["WallDecoBig"],
+  "3_0_3": ["WallDecoMid"]
+}
