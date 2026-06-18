@@ -40,7 +40,8 @@ func _editor_rebuild() -> void:
 	build(data)
 
 func build(data: Dictionary) -> void:
-	position = _v2(data["room_position"])
+	var vp := get_viewport().get_visible_rect().size
+	position = _v2(data["room_position"]) if data.has("room_position") else vp / 2.0
 	scale    = _v2(data["room_scale"])
 	_center.position = _v2(data.get("center", [0, 75]))
 

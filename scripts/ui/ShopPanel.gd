@@ -322,9 +322,15 @@ func _on_buy(item: Dictionary, cat: Dictionary, btn_panel: Control) -> void:
 	_coin_label.text = str(DataManager.coins)
 	_gem_label.text  = str(DataManager.gems)
 
-	# Fade out → in toàn bộ card, rồi refresh
+	var stock : int = item.get("stock", -1)
+	var owned_cnt : int = DataManager.owned_items.count(item.get("id", ""))
+	var will_be_removed := stock != -1 and owned_cnt >= stock
+
 	var card := btn_panel.get_parent().get_parent() as Control
 	if not card: _refresh_grid(); return
+	if will_be_removed:
+		_refresh_grid()
+		return
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tw := card.create_tween()
 	tw.tween_property(card, "modulate:a", 0.35, 0.25)

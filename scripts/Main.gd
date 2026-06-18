@@ -35,6 +35,18 @@ var _drag_origin_col      : int    = -1
 var _drag_origin_row      : int    = -1
 var _drag_preferred_surf  : String = ""
 
+var _camera        : Camera2D = null
+var _cam_origin    : Vector2  = Vector2.ZERO
+var _zoom_level    : float    = 1.0
+const ZOOM_MIN     := 1.0
+const ZOOM_MAX     := 2.5
+var _active_touches  : int        = 0
+var _touch_positions : Dictionary = {}
+var _pinch_distance  : float      = 0.0
+var _is_panning      : bool       = false
+var _pan_distance    : float      = 0.0
+const PAN_THRESHOLD               := 8.0
+
 var _pet_nodes       : Array[Node2D]  = []
 var _pet_labels      : Array[Label]   = []
 var _hunger_sliders  : Array[HSlider] = []
@@ -46,6 +58,7 @@ var _energy_dragging : Array[bool]    = []
 
 func _ready() -> void:
 	_load_room(room_data_path)
+	_setup_camera()
 	_hud.edit_mode_toggled.connect(_set_edit_mode)
 	_hud.room_purchased.connect(_on_room_purchased)
 	_hud.place_item.connect(_on_place_item)
@@ -57,6 +70,24 @@ func _ready() -> void:
 	_drag_canvas.layer = 20
 	add_child(_drag_canvas)
 	call_deferred("_build_debug_ui")
+
+func _setup_camera() -> void:
+	_camera = Camera2D.new()
+	var vp := get_viewport().get_visible_rect().size
+	_cam_origin = vp / 2.0
+	_camera.position = _cam_origin
+	_camera.zoom = Vector2(ZOOM_MIN, ZOOM_MIN)
+	add_child(_camera)
+	_camera.make_current()
+
+func _clamp_camera() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var lx := vp.x / 2.0 * (1.0 - 1.0 / _zoom_level)
+	var ly := vp.y / 2.0 * (1.0 - 1.0 / _zoom_level)
+	_camera.position = Vector2(
+		clamp(_camera.position.x, _cam_origin.x - lx, _cam_origin.x + lx),
+		clamp(_camera.position.y, _cam_origin.y - ly, _cam_origin.y + ly)
+	)
 
 # ── Room loading ──────────────────────────────────────────────────────────────
 
@@ -269,6 +300,8 @@ func _start_pending_drag(node: Node2D, gw: int, gd: int, gh: int, gsurf: String)
 		_drag_in_canvas = true
 	_set_item_collision(node, false)
 	_drag_base_scale = Vector2(absf(node.scale.x), node.scale.y)
+	if _drag_in_canvas:
+		node.scale *= _zoom_level
 
 # ── Edit mode ─────────────────────────────────────────────────────────────────
 
@@ -289,6 +322,7 @@ func _lift_to_canvas(item: Node2D, world_start: Vector2) -> void:
 	_drag_offset_canvas = item_vp - ctf * world_start
 	item.reparent(_drag_canvas, false)
 	item.position   = item_vp
+	item.scale      *= _zoom_level
 	_drag_in_canvas = true
 
 func _lower_from_canvas() -> void:
@@ -297,13 +331,73 @@ func _lower_from_canvas() -> void:
 	var world_pos := ctf.affine_inverse() * _dragging_item.position
 	_dragging_item.reparent(_room, false)
 	_dragging_item.position = _room.to_local(world_pos)
+	_dragging_item.scale    = _drag_base_scale
 	_drag_in_canvas = false
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_touch_positions[event.index] = event.position
+			_active_touches += 1
+			if _active_touches == 2:
+				var vals := _touch_positions.values()
+				_pinch_distance = (vals[0] as Vector2).distance_to(vals[1])
+			else:
+				_pan_distance   = 0.0
+				_is_panning     = false
+				_pinch_distance = 0.0
+		else:
+			_touch_positions.erase(event.index)
+			_active_touches = max(0, _active_touches - 1)
+			if _active_touches == 0:
+				_is_panning     = false
+				_pan_distance   = 0.0
+				_pinch_distance = 0.0
+
+	# Manual pinch zoom via two-finger ScreenDrag (iOS doesn't always fire MagnifyGesture)
+	if event is InputEventScreenDrag and _active_touches == 2:
+		_touch_positions[event.index] = event.position
+		if _pinch_distance > 0.0 and _touch_positions.size() == 2:
+			var vals     := _touch_positions.values()
+			var new_dist := (vals[0] as Vector2).distance_to(vals[1])
+			var factor   := new_dist / _pinch_distance
+			_pinch_distance = new_dist
+			_zoom_level = clamp(_zoom_level * factor, ZOOM_MIN, ZOOM_MAX)
+			_camera.zoom = Vector2(_zoom_level, _zoom_level)
+			_clamp_camera()
+		get_viewport().set_input_as_handled()
+		return
+
+	# Trackpad pinch (Mac)
+	if event is InputEventMagnifyGesture:
+		_zoom_level = clamp(_zoom_level * event.factor, ZOOM_MIN, ZOOM_MAX)
+		_camera.zoom = Vector2(_zoom_level, _zoom_level)
+		_clamp_camera()
+		get_viewport().set_input_as_handled()
+		return
+
+	var _can_pan := not _dragging_item and not _edit_mode and not _hold_active
+	var _is_pan  := false
+	if event is InputEventScreenDrag and _can_pan and _active_touches == 1:
+		_pan_distance += event.relative.length()
+		if _pan_distance >= PAN_THRESHOLD: _is_panning = true
+		_is_pan = _is_panning
+	elif event is InputEventMouseMotion and _can_pan \
+			and (event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT:
+		_pan_distance += event.relative.length()
+		if _pan_distance >= PAN_THRESHOLD: _is_panning = true
+		_is_pan = _is_panning
+	if _is_pan:
+		_camera.position -= event.relative / _zoom_level
+		_clamp_camera()
+		_hold_active = false
+		_hold_timer  = 0.0
+		get_viewport().set_input_as_handled()
+		return
 	if not _dragging_item: return
 	if event is InputEventMouseMotion:
 		if _drag_in_canvas:
-			_dragging_item.position = get_viewport().get_mouse_position() + _drag_offset_canvas
+			_dragging_item.position = get_viewport().get_mouse_position() + _drag_offset_canvas + Vector2(0, -80)
 			var world := get_viewport().get_canvas_transform().affine_inverse() * _dragging_item.position
 			_update_drag_highlight(_room.to_local(world) + _drag_foot_offset)
 		else:
@@ -312,7 +406,7 @@ func _input(event: InputEvent) -> void:
 			_update_drag_highlight(_dragging_item.position + _drag_foot_offset)
 	elif event is InputEventScreenDrag:
 		if _drag_in_canvas:
-			_dragging_item.position = event.position + _drag_offset_canvas
+			_dragging_item.position = event.position + _drag_offset_canvas + Vector2(0, -80)
 			var world := get_viewport().get_canvas_transform().affine_inverse() * _dragging_item.position
 			_update_drag_highlight(_room.to_local(world) + _drag_foot_offset)
 		else:
@@ -329,7 +423,7 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var gpos: Vector2
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		gpos = event.global_position
+		gpos = get_viewport().get_canvas_transform().affine_inverse() * event.position
 		if event.pressed:
 			if _edit_mode:
 				_try_start_drag(gpos)
@@ -343,7 +437,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hold_active = false
 			_hold_timer  = 0.0
 	elif event is InputEventScreenTouch:
-		gpos = event.position
+		gpos = get_viewport().get_canvas_transform().affine_inverse() * event.position
+		if _active_touches > 1:
+			_hold_active = false
+			return
 		if event.pressed:
 			if _edit_mode:
 				_try_start_drag(gpos)
@@ -436,9 +533,9 @@ func _try_start_drag(global_pos: Vector2) -> void:
 			_drag_origin_row     = -1
 			_drag_preferred_surf = str(best.get_meta("preferred_surface", ""))
 
+	_drag_base_scale = Vector2(absf(_dragging_item.scale.x), _dragging_item.scale.y)
 	_lift_to_canvas(_dragging_item, global_pos)
 	_set_item_collision(_dragging_item, false)
-	_drag_base_scale = Vector2(absf(_dragging_item.scale.x), _dragging_item.scale.y)
 
 func _snap_drag_item(local_pos: Vector2) -> void:
 	var gs   := _room.grid_system
@@ -555,6 +652,7 @@ func _end_drag() -> void:
 		elif gs and _drag_origin_surface != "":
 			gs.place_item(_dragging_item, _drag_origin_surface,
 				_drag_origin_col, _drag_origin_row, _drag_w, _drag_d, _drag_h)
+			_dragging_item.position -= _drag_foot_offset
 			if _drag_d == 0 and _drag_h > 0:
 				_apply_wall_flip(_dragging_item, _drag_origin_surface)
 
@@ -797,14 +895,16 @@ func _force_all_pets(anim: String) -> void:
 
 # Returns true if room_local_pos falls inside any Sprite2D child of item.
 func _sprite_hit(item: Node2D, room_local_pos: Vector2) -> bool:
+	const PAD := 1.0
 	for child in item.get_children():
 		if not child is Sprite2D: continue
 		var spr := child as Sprite2D
 		if not spr.texture: continue
 		var tex_size   := spr.texture.get_size()
 		var vis_center := item.position + spr.position + spr.offset * spr.scale
-		var half       := tex_size * spr.scale / 2.0
-		if Rect2(vis_center - half, tex_size * spr.scale).has_point(room_local_pos):
+		var half       := tex_size * spr.scale / 2.0 + Vector2(PAD, PAD)
+		var size       := tex_size * spr.scale + Vector2(PAD * 2.0, PAD * 2.0)
+		if Rect2(vis_center - half, size).has_point(room_local_pos):
 			return true
 	return false
 

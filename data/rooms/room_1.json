@@ -17,7 +17,80 @@
     "wall_rows": 12.0
   },
   "id": "room_1",
-  "items": [],
+  "items": [
+    {
+      "grid_col": 4,
+      "grid_row": 0,
+      "grid_surface": "floor",
+      "name": "bowl_water_3",
+      "position": [
+        55.849,
+        -4.654
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/WaterBowl.gd",
+      "texture": "res://assets/item/bowl/water/bowl_3.png"
+    },
+    {
+      "grid_col": 5.0,
+      "grid_row": 11.0,
+      "grid_surface": "floor",
+      "name": "@StaticBody2D@178",
+      "position": [
+        -81.778,
+        85.278
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/FoodBowl.gd",
+      "texture": "res://assets/item/bowl/food/bowl_2.png"
+    },
+    {
+      "grid_col": 1,
+      "grid_row": 10,
+      "grid_surface": "floor",
+      "name": "toy_5",
+      "position": [
+        -123.035,
+        36.514
+      ],
+      "scale_x": 0.948,
+      "scene": "res://scenes/items/Toy.tscn",
+      "sceneName": "Toy",
+      "texture": "res://assets/item/toy/toy_5.png"
+    },
+    {
+      "grid_col": 0,
+      "grid_row": 12,
+      "grid_surface": "floor",
+      "name": "shelf_1",
+      "position": [
+        -171.174,
+        53.75
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Shelf.tscn",
+      "sceneName": "Shelf",
+      "texture": "res://assets/item/shelf/shelf_1.png"
+    },
+    {
+      "grid_col": 0,
+      "grid_row": 0,
+      "grid_surface": "floor",
+      "name": "bed_small_1",
+      "position": [
+        1.001,
+        -7.957
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/CatBed.tscn",
+      "sceneName": "CatBed",
+      "texture": "res://assets/item/bed_small/bed_small_1.png"
+    }
+  ],
   "pets": [
     {
       "bed_item": "CatBed",
@@ -41,10 +114,6 @@
       "scene": "res://scenes/pet/Pet.tscn",
       "standalone_anim": ""
     }
-  ],
-  "room_position": [
-    270.0,
-    480.0
   ],
   "room_scale": [
     1.055,

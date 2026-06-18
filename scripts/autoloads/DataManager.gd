@@ -7,8 +7,8 @@ const SAVE_PATH      := "user://player_data.json"
 const INVENTORY_PATH := "user://inventory.json"
 const INVENTORY_DEFAULT := "res://data/inventory.json"
 
-var coins: int = 0
-var gems:  int = 0
+var coins: int = 999999
+var gems:  int = 9999
 var owned_items: Array = []
 
 func _ready() -> void:
@@ -61,8 +61,8 @@ func load_data() -> void:
 	var data = JSON.parse_string(file.get_as_text())
 	file.close()
 	if data is Dictionary:
-		coins = int(data.get("coins", 0))
-		gems  = int(data.get("gems",  0))
+		coins = int(data.get("coins", 999999))
+		gems  = int(data.get("gems",  9999))
 
 # ── Inventory ─────────────────────────────────────────────────────────────────
 

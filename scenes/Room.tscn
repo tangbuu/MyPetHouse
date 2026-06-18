@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://c6s6e4gtvfhlo" path="res://scripts/Room.gd" id="script"]
 
 [node name="Room" type="Node2D" unique_id=1781405327]
-position = Vector2(270, 480)
+position = Vector2(270, 680)
 scale = Vector2(1.055, 1.055)
 script = ExtResource("script")
 
