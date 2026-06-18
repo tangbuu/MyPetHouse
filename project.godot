@@ -25,9 +25,9 @@ DataManager="*res://scripts/autoloads/DataManager.gd"
 
 window/size/viewport_width=540
 window/size/viewport_height=1170
+window/size/resizable=false
 window/size/window_width_override=1080
 window/size/window_height_override=2340
-window/size/resizable=false
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
@@ -40,8 +40,5 @@ window/handheld/orientation=1
 
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
-environment/defaults/default_clear_color=Color(0.69, 0.82, 0.89, 1)
-
-[rendering]
-
 textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.69, 0.82, 0.89, 1)
