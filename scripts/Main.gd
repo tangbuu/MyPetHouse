@@ -10,6 +10,7 @@ var _room      : Room        = null
 var _bg_rect       : TextureRect = null
 var _night_overlay : ColorRect      = null
 var _night_shader  : ShaderMaterial = null
+var _base_light_radius : float = 0.31
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -199,6 +200,8 @@ func _process(delta: float) -> void:
 		var ctf := get_viewport().get_canvas_transform()
 		_night_shader.set_shader_parameter("overlay_color",  Color(0.04, 0.04, 0.18, alpha))
 		_night_shader.set_shader_parameter("viewport_size",  vp)
+		# Scale light radius with canvas zoom so the glow stays the same world-space size
+		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
 		var lamp_params := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
 		var lamps := WallLamp.all_lamps
 		for i in 4:
@@ -837,8 +840,7 @@ func _build_debug_ui() -> void:
 	lamp_r_slider.custom_minimum_size = Vector2(90, 20)
 	lamp_r_slider.value_changed.connect(func(v: float):
 		lamp_val_lbl.text = "%.2f" % v
-		if _night_shader:
-			_night_shader.set_shader_parameter("light_radius_norm", v))
+		_base_light_radius = v)
 	vbox.add_child(lamp_r_slider)
 
 	var reset_bag_btn := Button.new()
