@@ -10,7 +10,12 @@ var _room      : Room        = null
 var _bg_rect       : TextureRect = null
 var _night_overlay : ColorRect      = null
 var _night_shader  : ShaderMaterial = null
-var _base_light_radius : float = 0.31
+var _base_light_radius  : float = 0.23
+var _light_y_offset     : float = -49.0
+var _light_x_offset     : float = 1.0
+var _light_intensity    : float = 1.0
+var _iso_shear          : float = 0.15
+var _edge_feather       : float = 1.0
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -202,6 +207,9 @@ func _process(delta: float) -> void:
 		_night_shader.set_shader_parameter("viewport_size",  vp)
 		# Scale light radius with canvas zoom so the glow stays the same world-space size
 		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
+		_night_shader.set_shader_parameter("light_intensity", _light_intensity)
+		_night_shader.set_shader_parameter("iso_shear",      _iso_shear)
+		_night_shader.set_shader_parameter("edge_feather",   _edge_feather)
 		var lamp_params := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
 		var lamps := WallLamp.all_lamps
 		for i in 4:
@@ -209,7 +217,9 @@ func _process(delta: float) -> void:
 			if i < lamps.size() and alpha > 0.0:
 				var lamp := lamps[i] as Node2D
 				if lamp and lamp.is_inside_tree() and (lamp as WallLamp).is_on:
-					lamp_uv = (ctf * lamp.global_position) / vp
+					var base_uv := (ctf * lamp.global_position) / vp
+					var x_sign  : float = sign(0.5 - base_uv.x)  # +1 tường trái, -1 tường phải, 0 tường sau
+					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * x_sign, _light_y_offset))) / vp
 			_night_shader.set_shader_parameter(lamp_params[i], lamp_uv)
 
 	if _hold_active and not _edit_mode:
@@ -827,7 +837,7 @@ func _build_debug_ui() -> void:
 	lamp_title.custom_minimum_size = Vector2(46, 0)
 	lamp_row.add_child(lamp_title)
 	var lamp_val_lbl := Label.new()
-	lamp_val_lbl.text = "0.31"
+	lamp_val_lbl.text = "0.23"
 	lamp_val_lbl.add_theme_font_size_override("font_size", 11)
 	lamp_val_lbl.custom_minimum_size = Vector2(32, 0)
 	lamp_row.add_child(lamp_val_lbl)
@@ -836,12 +846,132 @@ func _build_debug_ui() -> void:
 	lamp_r_slider.min_value = 0.05
 	lamp_r_slider.max_value = 0.8
 	lamp_r_slider.step      = 0.01
-	lamp_r_slider.value     = 0.31
+	lamp_r_slider.value     = 0.23
 	lamp_r_slider.custom_minimum_size = Vector2(90, 20)
 	lamp_r_slider.value_changed.connect(func(v: float):
 		lamp_val_lbl.text = "%.2f" % v
 		_base_light_radius = v)
 	vbox.add_child(lamp_r_slider)
+
+	# Y offset slider
+	var y_row := HBoxContainer.new()
+	var y_title := Label.new()
+	y_title.text = "Y Offset"
+	y_title.add_theme_font_size_override("font_size", 11)
+	y_title.custom_minimum_size = Vector2(46, 0)
+	y_row.add_child(y_title)
+	var y_val_lbl := Label.new()
+	y_val_lbl.text = "-49"
+	y_val_lbl.add_theme_font_size_override("font_size", 11)
+	y_val_lbl.custom_minimum_size = Vector2(32, 0)
+	y_row.add_child(y_val_lbl)
+	vbox.add_child(y_row)
+	var y_slider := HSlider.new()
+	y_slider.min_value = -100.0
+	y_slider.max_value = 100.0
+	y_slider.step      = 1.0
+	y_slider.value     = -49.0
+	y_slider.custom_minimum_size = Vector2(90, 20)
+	y_slider.value_changed.connect(func(v: float):
+		y_val_lbl.text = "%d" % int(v)
+		_light_y_offset = v)
+	vbox.add_child(y_slider)
+
+	# X offset slider
+	var x_row := HBoxContainer.new()
+	var x_title := Label.new()
+	x_title.text = "X Offset"
+	x_title.add_theme_font_size_override("font_size", 11)
+	x_title.custom_minimum_size = Vector2(46, 0)
+	x_row.add_child(x_title)
+	var x_val_lbl := Label.new()
+	x_val_lbl.text = "1"
+	x_val_lbl.add_theme_font_size_override("font_size", 11)
+	x_val_lbl.custom_minimum_size = Vector2(32, 0)
+	x_row.add_child(x_val_lbl)
+	vbox.add_child(x_row)
+	var x_slider := HSlider.new()
+	x_slider.min_value = -100.0
+	x_slider.max_value = 100.0
+	x_slider.step      = 1.0
+	x_slider.value     = 1.0
+	x_slider.custom_minimum_size = Vector2(90, 20)
+	x_slider.value_changed.connect(func(v: float):
+		x_val_lbl.text = "%d" % int(v)
+		_light_x_offset = v)
+	vbox.add_child(x_slider)
+
+	# Intensity slider
+	var int_row := HBoxContainer.new()
+	var int_title := Label.new()
+	int_title.text = "Intensity"
+	int_title.add_theme_font_size_override("font_size", 11)
+	int_title.custom_minimum_size = Vector2(46, 0)
+	int_row.add_child(int_title)
+	var int_val_lbl := Label.new()
+	int_val_lbl.text = "1.00"
+	int_val_lbl.add_theme_font_size_override("font_size", 11)
+	int_val_lbl.custom_minimum_size = Vector2(32, 0)
+	int_row.add_child(int_val_lbl)
+	vbox.add_child(int_row)
+	var int_slider := HSlider.new()
+	int_slider.min_value = 0.0
+	int_slider.max_value = 3.0
+	int_slider.step      = 0.05
+	int_slider.value     = 1.0
+	int_slider.custom_minimum_size = Vector2(90, 20)
+	int_slider.value_changed.connect(func(v: float):
+		int_val_lbl.text = "%.2f" % v
+		_light_intensity = v)
+	vbox.add_child(int_slider)
+
+	# Iso Shear slider
+	var shear_row := HBoxContainer.new()
+	var shear_title := Label.new()
+	shear_title.text = "IsoShear"
+	shear_title.add_theme_font_size_override("font_size", 11)
+	shear_title.custom_minimum_size = Vector2(46, 0)
+	shear_row.add_child(shear_title)
+	var shear_val_lbl := Label.new()
+	shear_val_lbl.text = "0.15"
+	shear_val_lbl.add_theme_font_size_override("font_size", 11)
+	shear_val_lbl.custom_minimum_size = Vector2(32, 0)
+	shear_row.add_child(shear_val_lbl)
+	vbox.add_child(shear_row)
+	var shear_slider := HSlider.new()
+	shear_slider.min_value = -1.0
+	shear_slider.max_value = 1.0
+	shear_slider.step      = 0.05
+	shear_slider.value     = 0.15
+	shear_slider.custom_minimum_size = Vector2(90, 20)
+	shear_slider.value_changed.connect(func(v: float):
+		shear_val_lbl.text = "%.2f" % v
+		_iso_shear = v)
+	vbox.add_child(shear_slider)
+
+	# Edge Feather slider
+	var feath_row := HBoxContainer.new()
+	var feath_title := Label.new()
+	feath_title.text = "Feather"
+	feath_title.add_theme_font_size_override("font_size", 11)
+	feath_title.custom_minimum_size = Vector2(46, 0)
+	feath_row.add_child(feath_title)
+	var feath_val_lbl := Label.new()
+	feath_val_lbl.text = "1.00"
+	feath_val_lbl.add_theme_font_size_override("font_size", 11)
+	feath_val_lbl.custom_minimum_size = Vector2(32, 0)
+	feath_row.add_child(feath_val_lbl)
+	vbox.add_child(feath_row)
+	var feath_slider := HSlider.new()
+	feath_slider.min_value = 0.0
+	feath_slider.max_value = 1.5
+	feath_slider.step      = 0.05
+	feath_slider.value     = 1.0
+	feath_slider.custom_minimum_size = Vector2(90, 20)
+	feath_slider.value_changed.connect(func(v: float):
+		feath_val_lbl.text = "%.2f" % v
+		_edge_feather = v)
+	vbox.add_child(feath_slider)
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"
