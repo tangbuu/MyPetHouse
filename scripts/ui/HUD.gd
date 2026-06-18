@@ -6,15 +6,15 @@ signal room_purchased(texture_path: String)
 signal bag_btn_pressed
 signal place_item(item_data: Dictionary)
 
-@onready var _cat_name:   Label   = $StatsWidget/Row/RightCol/CatName
-@onready var _hunger_bar: StatBar = $StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox/HungerBar
-@onready var _energy_bar: StatBar = $StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox/EnergyBar
-@onready var _shop_btn:   Button  = $BottomButtons/ShopBtn
-@onready var _bag_btn:    Button  = $BottomButtons/BagBtn
-@onready var _shop_panel          = $ShopPanel
-@onready var _bag_panel           = $BagPanel
-@onready var _coin_label: Label   = $CurrencyContainer/CoinWidget/CoinPanel/CoinContent/CoinAmount
-@onready var _gem_label:  Label   = $CurrencyContainer/GemWidget/GemPanel/GemContent/GemAmount
+@onready var _player_name_label : Label  = $StatsWidget/Row/RightCol/PlayerName
+@onready var _level_label       : Label  = $StatsWidget/Row/RightCol/LevelLabel
+@onready var _datetime_label    : Label  = $StatsWidget/Row/RightCol/DateTimeLabel
+@onready var _shop_btn          : Button = $BottomButtons/ShopBtn
+@onready var _bag_btn           : Button = $BottomButtons/BagBtn
+@onready var _shop_panel                 = $ShopPanel
+@onready var _bag_panel                  = $BagPanel
+@onready var _coin_label        : Label  = $CurrencyContainer/CoinWidget/CoinPanel/CoinContent/CoinAmount
+@onready var _gem_label         : Label  = $CurrencyContainer/GemWidget/GemPanel/GemContent/GemAmount
 
 var _edit_mode : bool = false
 
@@ -28,11 +28,11 @@ func _ready() -> void:
 	_shop_panel.room_purchased.connect(func(p): room_purchased.emit(p))
 	_bag_panel.room_selected.connect(func(p): room_purchased.emit(p))
 	_bag_panel.place_item.connect(func(d): place_item.emit(d))
+	_player_name_label.text = DataManager.player_name
+	_level_label.text       = "Lv.%d" % DataManager.player_level
 
-func show_pet(pet: Pet) -> void:
-	_cat_name.text = pet.cat_name.to_upper()
-	_hunger_bar.watch_pet(pet)
-	_energy_bar.watch_pet(pet)
+func _process(_delta: float) -> void:
+	_datetime_label.text = DataManager.game_time_string()
 
 func _on_shop_btn() -> void:
 	_shop_panel.open()

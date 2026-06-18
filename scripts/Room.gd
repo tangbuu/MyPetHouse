@@ -113,6 +113,9 @@ func build(data: Dictionary) -> void:
 					break
 		node.name = item["name"]
 		add_child(node)
+		# Godot may sanitise the name (e.g. "@" → "_") — keep entry in sync
+		if node.name != item["name"]:
+			item["name"] = node.name
 		_item_map[node.name] = node
 		node.set_meta("item_id", item.get("id", item["name"]))
 

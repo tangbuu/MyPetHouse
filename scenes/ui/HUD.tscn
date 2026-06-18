@@ -1,12 +1,9 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/UIButton.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/ui/UIStyledButton.gd" id="12"]
-[ext_resource type="PackedScene" path="res://scenes/ui/StatBar.tscn" id="2"]
 [ext_resource type="Texture2D" path="res://assets/UI/avatar/avatar_frame.png" id="3"]
-[ext_resource type="Texture2D" path="res://assets/UI/bars/bar_fill_red.png" id="4"]
-[ext_resource type="Texture2D" path="res://assets/UI/bars/bar_fill_blue.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/UI/icons/coin_icon.png" id="6"]
 [ext_resource type="Texture2D" path="res://assets/UI/icons/gem_icon.png" id="7"]
 [ext_resource type="FontFile" path="res://assets/fonts/Jersey_25/Jersey25-Regular.ttf" id="9"]
@@ -24,11 +21,6 @@ border_width_right = 2
 border_width_bottom = 2
 border_width_left = 2
 border_color = Color(0.76, 0.62, 0.55, 1.0)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rightbg"]
-bg_color = Color(0.99, 0.88, 0.81, 1.0)
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_currency"]
 bg_color = Color(1.0, 0.91, 0.86, 0.95)
@@ -72,7 +64,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_widget")
 
 [node name="Row" type="HBoxContainer" parent="StatsWidget"]
 layout_mode = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 6
 
 [node name="Avatar" type="TextureRect" parent="StatsWidget/Row"]
 custom_minimum_size = Vector2(52, 52)
@@ -82,43 +74,33 @@ stretch_mode = 5
 
 [node name="RightCol" type="VBoxContainer" parent="StatsWidget/Row"]
 layout_mode = 2
-custom_minimum_size = Vector2(40, 0)
-size_flags_horizontal = 0
+custom_minimum_size = Vector2(60, 0)
+size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 2
 
-[node name="BarsArea" type="PanelContainer" parent="StatsWidget/Row/RightCol"]
+[node name="PlayerName" type="Label" parent="StatsWidget/Row/RightCol"]
 layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_rightbg")
-
-[node name="BarsMargin" type="MarginContainer" parent="StatsWidget/Row/RightCol/BarsArea"]
-layout_mode = 2
-theme_override_constants/margin_left = 2
-theme_override_constants/margin_top = 2
-theme_override_constants/margin_right = 3
-theme_override_constants/margin_bottom = 2
-
-[node name="BarsVBox" type="VBoxContainer" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="HungerBar" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox" instance=ExtResource("2")]
-layout_mode = 2
-stat_name = "hunger"
-fill_texture = ExtResource("4")
-
-[node name="EnergyBar" parent="StatsWidget/Row/RightCol/BarsArea/BarsMargin/BarsVBox" instance=ExtResource("2")]
-layout_mode = 2
-stat_name = "energy"
-fill_texture = ExtResource("5")
-
-[node name="CatName" type="Label" parent="StatsWidget/Row/RightCol"]
-layout_mode = 2
-text = "BIN"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 14
+text = "PLAYER"
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.42, 0.26, 0.16, 1.0)
+theme_override_fonts/font = ExtResource("9")
+
+[node name="LevelLabel" type="Label" parent="StatsWidget/Row/RightCol"]
+layout_mode = 2
+text = "Lv.1"
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.55, 0.38, 0.26, 1.0)
+theme_override_fonts/font = ExtResource("9")
+
+[node name="DateTimeLabel" type="Label" parent="StatsWidget/Row/RightCol"]
+layout_mode = 2
+text = "06:00"
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.55, 0.38, 0.26, 1.0)
 theme_override_fonts/font = ExtResource("9")
 
 [node name="CurrencyContainer" type="HBoxContainer" parent="."]

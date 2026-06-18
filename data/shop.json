@@ -127,6 +127,17 @@
       ]
     },
     {
+      "id": "wall_lamp",
+      "label": "Wall Lamp",
+      "type": "furniture",
+      "scene": "res://scenes/items/WallLamp.tscn",
+      "sceneName": "WallLamp",
+      "preferred_surface": "",
+      "items": [
+        { "id": "wall_lamp_1", "name": "Lamp 1", "texture": "res://assets/item/lamp/lamp_sheet.png", "price": 180, "currency": "coin", "stock": -1 }
+      ]
+    },
+    {
       "id": "window",
       "label": "Windows",
       "type": "furniture",

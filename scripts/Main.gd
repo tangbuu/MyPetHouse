@@ -7,7 +7,9 @@ extends Node2D
 
 var _room_data : Dictionary  = {}
 var _room      : Room        = null
-var _bg_rect   : TextureRect = null
+var _bg_rect       : TextureRect = null
+var _night_overlay : ColorRect      = null
+var _night_shader  : ShaderMaterial = null
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -47,6 +49,8 @@ var _is_panning      : bool       = false
 var _pan_distance    : float      = 0.0
 const PAN_THRESHOLD               := 8.0
 
+var _item_place_counter : int = 0
+
 var _pet_nodes       : Array[Node2D]  = []
 var _pet_labels      : Array[Label]   = []
 var _hunger_sliders  : Array[HSlider] = []
@@ -69,7 +73,22 @@ func _ready() -> void:
 	_drag_canvas = CanvasLayer.new()
 	_drag_canvas.layer = 20
 	add_child(_drag_canvas)
+	_setup_night_overlay()
 	call_deferred("_build_debug_ui")
+
+func _setup_night_overlay() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 0
+	add_child(layer)
+	_night_overlay = ColorRect.new()
+	_night_overlay.color = Color(1, 1, 1, 1)  # driven entirely by shader
+	_night_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_night_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_night_overlay.size = get_viewport().get_visible_rect().size
+	_night_shader = ShaderMaterial.new()
+	_night_shader.shader = load("res://shaders/night_overlay.gdshader")
+	_night_overlay.material = _night_shader
+	layer.add_child(_night_overlay)
 
 func _setup_camera() -> void:
 	_camera = Camera2D.new()
@@ -98,6 +117,14 @@ func _load_room(res_path: String) -> void:
 		return
 	_room_data = JSON.parse_string(file.get_as_text())
 	file.close()
+	# Sync counter so new placements don't collide with loaded instance names
+	for item : Dictionary in _room_data.get("items", []):
+		var n : String = item.get("name", "")
+		var idx := n.rfind("_i")
+		if idx >= 0:
+			var num := n.substr(idx + 2).to_int()
+			if num > _item_place_counter:
+				_item_place_counter = num
 	_build(_room_data)
 
 func _build(data: Dictionary) -> void:
@@ -155,9 +182,33 @@ func _build(data: Dictionary) -> void:
 	for pet in pet_nodes:
 		var others: Array = pet_nodes.filter(func(o): return o != pet)
 		pet.set("_other_pets", others)
-		pet.clicked.connect(_hud.show_pet)
 
 func _process(delta: float) -> void:
+	if _night_shader:
+		var t := DataManager.game_time_hours
+		var alpha: float
+		if t < 11.0:
+			alpha = 0.0
+		elif t < 13.0:
+			alpha = lerpf(0.0, 0.65, (t - 11.0) / 2.0)
+		elif t < 21.0:
+			alpha = 0.65
+		else:
+			alpha = lerpf(0.65, 0.0, (t - 21.0) / 3.0)
+		var vp  := get_viewport().get_visible_rect().size
+		var ctf := get_viewport().get_canvas_transform()
+		_night_shader.set_shader_parameter("overlay_color",  Color(0.04, 0.04, 0.18, alpha))
+		_night_shader.set_shader_parameter("viewport_size",  vp)
+		var lamp_params := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
+		var lamps := WallLamp.all_lamps
+		for i in 4:
+			var lamp_uv := Vector2(-9.0, -9.0)
+			if i < lamps.size() and alpha > 0.0:
+				var lamp := lamps[i] as Node2D
+				if lamp and lamp.is_inside_tree() and (lamp as WallLamp).is_on:
+					lamp_uv = (ctf * lamp.global_position) / vp
+			_night_shader.set_shader_parameter(lamp_params[i], lamp_uv)
+
 	if _hold_active and not _edit_mode:
 		_hold_timer += delta
 		if _hold_timer >= _HOLD_THRESHOLD:
@@ -225,7 +276,6 @@ func _on_place_item(item_data: Dictionary) -> void:
 	if scene_path == "" or not ResourceLoader.exists(scene_path): return
 
 	var node := (load(scene_path) as PackedScene).instantiate() as Node2D
-	node.name = item_data["id"]
 	node.set_meta("item_id", item_data["id"])
 
 	if item_data.has("script") and item_data["script"] != "":
@@ -250,14 +300,18 @@ func _on_place_item(item_data: Dictionary) -> void:
 	if gsurf != "":
 		node.set_meta("preferred_surface", gsurf)
 
-	node.name = item_data["id"]
+	# Assign a unique instance name before add_child to avoid Godot auto-renaming
+	_item_place_counter += 1
+	var inst_name : String = str(item_data["id"]) + "_i" + str(_item_place_counter)
+	node.name = inst_name
 	_room.add_child(node)
-	_room.register_item(node.name, node)
+	_room.register_item(inst_name, node)
 	node.position = _room._center.position
 
 	# Add entry to room_data so _save_room_data() will persist it
 	var entry := {
-		"name":         node.name,
+		"name":         inst_name,
+		"id":           item_data["id"],
 		"scene":        scene_path,
 		"sceneName":    scene_name,
 		"grid_col":     0,
@@ -626,6 +680,8 @@ func _end_drag() -> void:
 			if surface_ok and gs.can_place(surf, col, row, _drag_w, _drag_d, _drag_h, _dragging_item):
 				gs.place_item(_dragging_item, surf, col, row, _drag_w, _drag_d, _drag_h)
 				_dragging_item.position -= _drag_foot_offset
+				if _drag_d == 0 and _drag_h > 0:
+					_apply_wall_flip(_dragging_item, surf)
 				placed = true
 
 	if not placed:
@@ -741,6 +797,49 @@ func _build_debug_ui() -> void:
 		DataManager.add_coins(999999)
 		DataManager.add_gems(9999))
 	vbox.add_child(max_btn)
+
+	# Time slider
+	var time_lbl := Label.new()
+	time_lbl.text = "Time"
+	time_lbl.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(time_lbl)
+	var time_slider := HSlider.new()
+	time_slider.min_value = 0.0
+	time_slider.max_value = 24.0
+	time_slider.step      = 0.25
+	time_slider.custom_minimum_size = Vector2(90, 20)
+	time_slider.value = DataManager.game_time_hours
+	time_slider.value_changed.connect(func(v: float):
+		DataManager.game_time_hours = v
+		time_lbl.text = DataManager.game_time_string())
+	vbox.add_child(time_slider)
+
+	# Lamp shader debug
+	var lamp_sep := HSeparator.new()
+	vbox.add_child(lamp_sep)
+	var lamp_row := HBoxContainer.new()
+	var lamp_title := Label.new()
+	lamp_title.text = "Radius"
+	lamp_title.add_theme_font_size_override("font_size", 11)
+	lamp_title.custom_minimum_size = Vector2(46, 0)
+	lamp_row.add_child(lamp_title)
+	var lamp_val_lbl := Label.new()
+	lamp_val_lbl.text = "0.31"
+	lamp_val_lbl.add_theme_font_size_override("font_size", 11)
+	lamp_val_lbl.custom_minimum_size = Vector2(32, 0)
+	lamp_row.add_child(lamp_val_lbl)
+	vbox.add_child(lamp_row)
+	var lamp_r_slider := HSlider.new()
+	lamp_r_slider.min_value = 0.05
+	lamp_r_slider.max_value = 0.8
+	lamp_r_slider.step      = 0.01
+	lamp_r_slider.value     = 0.31
+	lamp_r_slider.custom_minimum_size = Vector2(90, 20)
+	lamp_r_slider.value_changed.connect(func(v: float):
+		lamp_val_lbl.text = "%.2f" % v
+		if _night_shader:
+			_night_shader.set_shader_parameter("light_radius_norm", v))
+	vbox.add_child(lamp_r_slider)
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"

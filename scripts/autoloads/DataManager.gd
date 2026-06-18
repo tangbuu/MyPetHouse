@@ -11,9 +11,31 @@ var coins: int = 999999
 var gems:  int = 9999
 var owned_items: Array = []
 
+var player_name  : String = "PLAYER"
+var player_level : int    = 1
+
+# In-game clock: 1 real second = 1 game minute
+var game_day         : int   = 1
+var game_time_hours  : float = 6.0
+const GAME_TIME_SCALE := 1.0 / 60.0  # real seconds → game hours
+
 func _ready() -> void:
 	load_data()
 	_load_inventory()
+
+func _process(delta: float) -> void:
+	game_time_hours += delta * GAME_TIME_SCALE
+	if game_time_hours >= 24.0:
+		game_time_hours -= 24.0
+		game_day += 1
+
+func game_time_string() -> String:
+	var h := int(game_time_hours)
+	var m := int((game_time_hours - h) * 60.0)
+	var ampm := "AM" if h < 12 else "PM"
+	var h12  := h % 12
+	if h12 == 0: h12 = 12
+	return "%d:%02d %s" % [h12, m, ampm]
 
 # ── Resources ─────────────────────────────────────────────────────────────────
 
@@ -46,7 +68,11 @@ func spend_gems(amount: int) -> bool:
 # ── Save / Load ───────────────────────────────────────────────────────────────
 
 func save_data() -> void:
-	var data := {"coins": coins, "gems": gems}
+	var data := {
+		"coins": coins, "gems": gems,
+		"player_name": player_name, "player_level": player_level,
+		"game_day": game_day, "game_time_hours": game_time_hours
+	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data, "  "))
@@ -61,8 +87,12 @@ func load_data() -> void:
 	var data = JSON.parse_string(file.get_as_text())
 	file.close()
 	if data is Dictionary:
-		coins = int(data.get("coins", 999999))
-		gems  = int(data.get("gems",  9999))
+		coins            = int(data.get("coins", 999999))
+		gems             = int(data.get("gems",  9999))
+		player_name      = str(data.get("player_name",  "PLAYER"))
+		player_level     = int(data.get("player_level", 1))
+		game_day         = int(data.get("game_day",     1))
+		game_time_hours  = float(data.get("game_time_hours", 6.0))
 
 # ── Inventory ─────────────────────────────────────────────────────────────────
 
