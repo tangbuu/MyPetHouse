@@ -41,5 +41,11 @@ func _update(hours: float) -> void:
 	is_on = alpha > 0.0
 	_sprite.region_rect = Rect2(86, 0, 86, 101) if is_on else Rect2(0, 0, 86, 101)
 
+func get_wall_dir() -> float:
+	match get_meta("grid_surface", ""):
+		"wall_left":  return 1.0
+		"wall_right": return -1.0
+		_:            return 0.0
+
 func _exit_tree() -> void:
 	all_lamps.erase(self)

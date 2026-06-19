@@ -16,14 +16,19 @@ uniform vec2 light_pos_1 = vec2(-9.0, -9.0);
 uniform vec2 light_pos_2 = vec2(-9.0, -9.0);
 uniform vec2 light_pos_3 = vec2(-9.0, -9.0);
 
-float lamp_hole(vec2 screen_uv, vec2 lamp_uv) {
+// Hướng tường của từng đèn: +1 = wall_left, -1 = wall_right, 0 = không xác định.
+// Set từ GDScript dựa trên grid_surface meta, không tính từ UV position.
+uniform float light_dir_0 = 0.0;
+uniform float light_dir_1 = 0.0;
+uniform float light_dir_2 = 0.0;
+uniform float light_dir_3 = 0.0;
+
+float lamp_hole(vec2 screen_uv, vec2 lamp_uv, float wall_dir) {
 	if (lamp_uv.x < -1.0) return 0.0;
 	float aspect = viewport_size.y / viewport_size.x;
 	vec2 raw = screen_uv - lamp_uv;
 
-	// Auto wall-side detection: đèn ở nửa trái màn hình → tường trái → shear dương.
-	// Đèn ở nửa phải → tường phải → shear âm. Tường sau (giữa) → shear ≈ 0.
-	float wall_shear = iso_shear * sign(0.5 - lamp_uv.x);
+	float wall_shear = iso_shear * wall_dir;
 	vec2 raw_iso = vec2(raw.x, raw.y - raw.x * wall_shear);
 	vec2 d = raw_iso * vec2(1.0, aspect);
 	float dist = length(d);
@@ -41,10 +46,10 @@ float lamp_hole(vec2 screen_uv, vec2 lamp_uv) {
 
 void fragment() {
 	float no_light = 1.0;
-	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_0));
-	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_1));
-	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_2));
-	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_3));
+	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_0, light_dir_0));
+	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_1, light_dir_1));
+	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_2, light_dir_2));
+	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_3, light_dir_3));
 	float influence = clamp((1.0 - no_light) * light_intensity, 0.0, 1.0);
 
 	vec3 warm_col = vec3(0.55, 0.32, 0.03);

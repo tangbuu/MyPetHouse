@@ -95,14 +95,14 @@
       "texture": "res://assets/item/window/window_1.png"
     },
     {
-      "grid_col": 10,
-      "grid_row": 3,
+      "grid_col": 12,
+      "grid_row": 4,
       "grid_surface": "floor",
       "id": "fountain_2",
       "name": "fountain_2_i16",
       "position": [
-        96.969,
-        53.642
+        110.701,
+        75.994
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Fountain.tscn",
@@ -110,14 +110,14 @@
       "texture": "res://assets/item/fountain/fountain_2.png"
     },
     {
-      "grid_col": 9,
+      "grid_col": 10,
       "grid_row": 4,
       "grid_surface": "wall_left",
       "id": "wall_lamp_1",
       "name": "wall_lamp_1_i18",
       "position": [
-        -136.778,
-        -83.861
+        -150.556,
+        -76.389
       ],
       "scale_x": -1.0,
       "scene": "res://scenes/items/WallLamp.tscn",
@@ -154,6 +154,22 @@
       "sceneName": "Bowl",
       "script": "res://scripts/items/WaterBowl.gd",
       "texture": "res://assets/item/bowl/water/bowl_3.png"
+    },
+    {
+      "grid_col": 3,
+      "grid_row": 13,
+      "grid_surface": "floor",
+      "id": "bowl_water_11",
+      "name": "bowl_water_11_i21",
+      "position": [
+        -136.827,
+        76.272
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/WaterBowl.gd",
+      "texture": "res://assets/item/bowl/water/bowl_11.png"
     }
   ],
   "pets": [

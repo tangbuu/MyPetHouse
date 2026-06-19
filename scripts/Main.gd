@@ -44,6 +44,7 @@ var _drag_origin_surface  : String = ""
 var _drag_origin_col      : int    = -1
 var _drag_origin_row      : int    = -1
 var _drag_preferred_surf  : String = ""
+var _drag_current_surface : String = ""   # surface đang hover trong khi drag (real-time)
 
 var _camera        : Camera2D = null
 var _cam_origin    : Vector2  = Vector2.ZERO
@@ -58,7 +59,8 @@ const PAN_THRESHOLD               := 8.0
 
 var _item_place_counter : int = 0
 
-const _LAMP_PARAMS := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
+const _LAMP_PARAMS     := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
+const _LAMP_DIR_PARAMS := ["light_dir_0", "light_dir_1", "light_dir_2", "light_dir_3"]
 var _vp_size : Vector2 = Vector2.ZERO
 
 var _pet_nodes       : Array[Node2D]  = []
@@ -224,14 +226,23 @@ func _process(delta: float) -> void:
 		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
 		var lamps := WallLamp.all_lamps
 		for i in 4:
-			var lamp_uv := Vector2(-9.0, -9.0)
+			var lamp_uv  := Vector2(-9.0, -9.0)
+			var wall_dir := 0.0
 			if i < lamps.size() and alpha > 0.0:
 				var lamp := lamps[i] as Node2D
 				if lamp and lamp.is_inside_tree() and (lamp as WallLamp).is_on:
-					var base_uv := (ctf * lamp.global_position) / _vp_size
-					var x_sign  : float = sign(0.5 - base_uv.x)  # +1 tường trái, -1 tường phải, 0 tường sau
-					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * x_sign, _light_y_offset))) / _vp_size
-			_night_shader.set_shader_parameter(_LAMP_PARAMS[i], lamp_uv)
+					var wl := lamp as WallLamp
+					# Khi đang drag lamp này, dùng surface hover real-time thay vì meta
+					if _dragging_item == lamp and _drag_current_surface != "":
+						match _drag_current_surface:
+							"wall_left":  wall_dir =  1.0
+							"wall_right": wall_dir = -1.0
+							_:            wall_dir =  0.0
+					else:
+						wall_dir = wl.get_wall_dir()
+					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * wall_dir, _light_y_offset))) / _vp_size
+			_night_shader.set_shader_parameter(_LAMP_PARAMS[i],     lamp_uv)
+			_night_shader.set_shader_parameter(_LAMP_DIR_PARAMS[i], wall_dir)
 
 	_hud.set_bag_drop_highlight(_dragging_item != null and _hud.is_bag_panel_hovered(_drag_screen_pos))
 
@@ -662,6 +673,7 @@ func _update_drag_highlight(local_pos: Vector2) -> void:
 
 	if is_wall_item:
 		_apply_wall_flip(_dragging_item, surf)
+		_drag_current_surface = surf
 
 	var quads : Array = [gs.cell_quad(surf, col, row, _drag_w, rows)]
 
@@ -739,13 +751,14 @@ func _end_drag() -> void:
 			_room_data["items"] = items.filter(func(e): return e.get("name", "") != item_name)
 			_room.unregister_item(item_name)
 			_dragging_item.queue_free()
-			_dragging_item       = null
-			_pending_item        = null
-			_pending_item_data   = {}
-			_drag_origin_surface = ""
-			_drag_origin_col     = -1
-			_drag_origin_row     = -1
-			_drag_preferred_surf = ""
+			_dragging_item        = null
+			_pending_item         = null
+			_pending_item_data    = {}
+			_drag_current_surface = ""
+			_drag_origin_surface  = ""
+			_drag_origin_col      = -1
+			_drag_origin_row      = -1
+			_drag_preferred_surf  = ""
 			_save_room_data()
 			_hud.exit_edit_mode()
 			if bag_was_open:
@@ -762,11 +775,12 @@ func _end_drag() -> void:
 
 	_save_room_data()
 	var was_pending := _dragging_item == _pending_item and placed
-	_dragging_item       = null
-	_drag_origin_surface = ""
-	_drag_origin_col     = -1
-	_drag_origin_row     = -1
-	_drag_preferred_surf = ""
+	_dragging_item        = null
+	_drag_current_surface = ""
+	_drag_origin_surface  = ""
+	_drag_origin_col      = -1
+	_drag_origin_row      = -1
+	_drag_preferred_surf  = ""
 	_hud.exit_edit_mode()
 	if was_pending:
 		_pending_item      = null
