@@ -13,31 +13,6 @@ const WALK_DOWN_SHEET := "res://assets/cat/sheets/walk_down_sheet.png"
 const WALK_UP_SHEET   := "res://assets/cat/sheets/walk_up_sheet.png"
 const EAT_SHEET   := "res://assets/cat/sheets/eat_sheet.png"
 const SLEEP_SHEET := "res://assets/cat/sheets/sleep_sheet.png"
-const FRAME_COUNT  := 4
-const MOVE_SPEED   := 45.0
-const ARRIVE_DIST  := 5.0
-const ACCELERATION := 400.0
-const FRICTION     := 500.0
-
-const HUNGER_DECAY      := 0.0015
-const HUNGER_EAT_GAIN   := 1.0
-const THIRST_DECAY      := 0.0020
-const THIRST_DRINK_GAIN := 1.0
-const ENERGY_DECAY      := 0.0008
-const ENERGY_SLEEP_GAIN := 0.003
-
-# ── Tunable game-balance constants ────────────────────────────────────────────
-const URGENCY_THRESHOLD       := 0.3   # hunger/thirst/energy below this → behave urgently
-const ENERGY_FULL_THRESHOLD   := 0.95  # energy level that ends sleep
-const WANDER_AFTER_ACTION_MIN := 1.0   # min wander duration after eat/drink/sleep finish
-const WANDER_AFTER_ACTION_MAX := 2.0   # max wander duration after eat/drink/sleep finish
-const IDLE_RANDOM_NEXT_DELAY  := 0.3   # pause before next behavior after idle_random
-const BEHAVIOR_COOLDOWN_RESET := 3.0   # rate-limit on urgent idle→behavior triggers
-const NAV_TIMEOUT_BOWL        := 10.0  # give up navigating to bowl after this many seconds
-const NAV_TIMEOUT_BED         := 15.0  # give up navigating to bed after this many seconds
-const COLLISION_RESTORE_DELAY := 2.0   # delay before re-enabling item collision after action
-const VEL_IDLE_THRESHOLD_SQ   := 25.0  # velocity² above this = "still moving" (5 px/s)
-const ARRIVE_DIST_DEFAULT     := 52.0  # relaxed arrive radius reset after purposeful nav
 
 # Trạng thái animation nội bộ — dùng để quản lý chuỗi chuyển anim tập trung
 enum AnimState {
@@ -47,13 +22,17 @@ enum AnimState {
 	SLEEP_PREPARE, SLEEPING, SLEEP_DONE,
 }
 
-@export var bed_node       : Node2D = null
-@export var food_bowl      : Node2D = null
-@export var water_bowl     : Node2D = null
-@export var standalone_anim: String = ""
-@export var cat_name       : String = "Cat"
+@export var bed_node       : Node2D    = null
+@export var food_bowl      : Node2D    = null
+@export var water_bowl     : Node2D    = null
+@export var standalone_anim: String    = ""
+@export var cat_name       : String    = "Cat"
 @export var cat_style      : Dictionary = {}
-@export var debug_log      : bool   = false
+@export var debug_log      : bool      = false
+## Config chứa toàn bộ hằng số game-balance. Tạo .tres trong Inspector và gán vào đây.
+@export var config         : PetConfig = null
+## Thêm behavior tùy chỉnh (ScratchPostBehavior, ToyBehavior…) không cần sửa Pet.gd
+@export var extra_behaviors: Array[PetBehavior] = []
 
 signal clicked(pet: Pet)
 
@@ -65,47 +44,39 @@ var _idle_random_anim : String    = "idle3"
 
 var _tween        : Tween
 var _spawn_pos    : Vector2
-var _target_pos   : Vector2
-var _on_arrive    : Callable = Callable()
-var _arrive_dist  : float    = 52.0
 var _current_state: int      = -1
 var _move_dir     : Vector2  = Vector2.ZERO
 var _wander_timer : float    = 0.0
-var _detour_dir         : Vector2  = Vector2.ZERO
-var _detour_timer       : float    = 0.0
-var _detour_count       : int      = 0
-var _stuck_timer        : float    = 0.0
-var _stuck_pos          : Vector2  = Vector2.ZERO
-var _nav_target              : String   = ""     # "bowl" | "water" | "bed" | ""
-var _interaction_timeout     : float   = 0.0
-var _cat_bump_cooldown       : float   = 0.0
-var _behavior_cooldown       : float   = 0.0
-var _bed_collision_disabled  : bool    = false
-var _last_idle_name          : String  = ""
+var _cat_bump_cooldown : float = 0.0
+var _behavior_cooldown : float = 0.0
+var _last_idle_name    : String = ""
+var _last_walk_dir     : Vector2 = Vector2.DOWN  # hướng di chuyển cuối — tránh flicker frame đổi hướng
+var _pre_action_pos    : Vector2 = Vector2.ZERO  # vị trí trước khi teleport tới item
+var _action_item_pos   : Vector2 = Vector2.ZERO  # vị trí item, dùng cho return teleport
+var _action_face_pos   : Vector2 = Vector2.INF   # item center để xác định hướng mặt sau teleport
 
 var hunger : float = 1.0
 var thirst : float = 1.0
 var energy : float = 1.0
 
 var _laziness    : float
-var _playfulness : float
-var _shadow_mat : ShaderMaterial = null
-var _affection   : float
 var _curiosity   : float
+var _shadow_mat : ShaderMaterial = null
 
 var _other_pets   : Array   = []
 var _floor_center : Vector2 = Vector2.ZERO
+var _behaviors    : Array[PetBehavior] = []  # sorted by priority desc, built in _ready
+var _cfg          : PetConfig                # resolved in _ready; never null
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
-	_spawn_pos   = global_position
-	_target_pos  = global_position
-	_laziness    = randf()
-	_playfulness = randf()
-	_affection   = randf()
-	_curiosity   = randf()
+	_cfg       = config if config else PetConfig.new()
+	_spawn_pos = global_position
+	_laziness  = randf()
+	_curiosity = randf()
 	_setup_frames()
+	_setup_behaviors()
 	# Một kết nối duy nhất cho animation_finished — không connect/disconnect thủ công
 	sprite.animation_finished.connect(_on_animation_finished)
 	GameManager.state_changed.connect(_on_state_changed)
@@ -194,6 +165,11 @@ func _add_anim(frames: SpriteFrames, anim: String, dir: String,
 
 # ── Animation State Machine ───────────────────────────────────────────────────
 
+## Frozen = tĩnh tuyệt đối: velocity=0, không nhận tác động di chuyển.
+## Mèo thoát frozen bằng cách set _move_dir (wander) hoặc _on_arrive (nav).
+func _is_frozen() -> bool:
+	return _anim_state != AnimState.WALK and _move_dir == Vector2.ZERO
+
 func _change_anim_state(new_state: AnimState) -> void:
 	if debug_log and new_state != _anim_state:
 		print("[%s] State: %s → %s" % [cat_name, AnimState.keys()[_anim_state], AnimState.keys()[new_state]])
@@ -218,35 +194,24 @@ func _on_animation_finished() -> void:
 		AnimState.IDLE:
 			_do_natural_behavior()
 		AnimState.IDLE_RANDOM:
-			get_tree().create_timer(IDLE_RANDOM_NEXT_DELAY).timeout.connect(func(): _do_natural_behavior())
+			get_tree().create_timer(_cfg.idle_random_next_delay).timeout.connect(func(): _do_natural_behavior())
 		AnimState.EAT_START:
 			_change_anim_state(AnimState.EAT_LOOP)
 		AnimState.EAT_END:
-			_start_wander(randf_range(WANDER_AFTER_ACTION_MIN, WANDER_AFTER_ACTION_MAX))
+			_return_after_action()
 		AnimState.DRINK_START:
 			_change_anim_state(AnimState.DRINK_LOOP)
 		AnimState.DRINK_END:
-			_start_wander(randf_range(WANDER_AFTER_ACTION_MIN, WANDER_AFTER_ACTION_MAX))
+			_return_after_action()
 		AnimState.SLEEP_PREPARE:
 			_change_anim_state(AnimState.SLEEPING)
 		AnimState.SLEEP_DONE:
-			_start_wander(randf_range(WANDER_AFTER_ACTION_MIN, WANDER_AFTER_ACTION_MAX))
-			if _bed_collision_disabled and bed_node:
-				_bed_collision_disabled = false
-				var b := bed_node
-				get_tree().create_timer(COLLISION_RESTORE_DELAY).timeout.connect(func():
-					if is_instance_valid(b): b.set("collision_layer", 1))
+			_return_after_action()
 
 # ── Physics ───────────────────────────────────────────────────────────────────
 
 # Nếu IDLE/IDLE_RANDOM đang play nhưng velocity vẫn đáng kể (bị đẩy bởi physics),
 # ép ngay sang walk animation để tránh trạng thái "đứng yên nhưng đang trượt".
-func _sync_state_to_velocity() -> void:
-	if _anim_state not in [AnimState.IDLE, AnimState.IDLE_RANDOM]: return
-	if velocity.length_squared() > VEL_IDLE_THRESHOLD_SQ:
-		if debug_log:
-			print("[%s] sync_velocity: forced IDLE → WALK (vel=%.1f)" % [cat_name, velocity.length()])
-		_set_move_anim(true)
 
 func _update_shadow() -> void:
 	if not _shadow_mat: return
@@ -291,142 +256,43 @@ func _physics_process(delta: float) -> void:
 	_tick_stats(delta)
 	_cat_bump_cooldown = maxf(_cat_bump_cooldown - delta, 0.0)
 	_behavior_cooldown = maxf(_behavior_cooldown - delta, 0.0)
-	_sync_state_to_velocity()
-
-	# Timeout: mèo bỏ cuộc nếu không tới được mục tiêu sau N giây
-	if _nav_target != "" and _on_arrive.is_valid():
-		_interaction_timeout -= delta
-		if _interaction_timeout <= 0.0:
-			print("[Pet] gave up navigating to: ", _nav_target)
-			if _nav_target == "bed" and bed_node:
-				bed_node.set("collision_layer", 1)
-				_bed_collision_disabled = false
-			elif _nav_target == "bowl" and food_bowl:
-				food_bowl.set("collision_layer", 1)
-			elif _nav_target == "water" and water_bowl:
-				water_bowl.set("collision_layer", 1)
-			_nav_target  = ""
-			_on_arrive   = Callable()
-			velocity     = Vector2.ZERO
-			_move_dir    = Vector2.ZERO
-			_do_natural_behavior()
-			return
-
-	# Interrupt khi có nhu cầu cấp bách (không làm gián đoạn hành động đang dở)
-	if not _on_arrive.is_valid() and not PetStateMachine.is_busy(_anim_state):
-		var urgent := hunger < URGENCY_THRESHOLD or thirst < URGENCY_THRESHOLD or energy < URGENCY_THRESHOLD
-		if urgent:
-			if _move_dir != Vector2.ZERO:
-				# Đang wander → dừng ngay, để friction coast xong rồi idle gọi _do_natural_behavior
-				_move_dir     = Vector2.ZERO
-				_wander_timer = 0.0
-				velocity      = Vector2.ZERO
-			elif _anim_state in [AnimState.IDLE, AnimState.IDLE_RANDOM] and _behavior_cooldown <= 0.0:
-				# Đang idle → react ngay không chờ animation kết thúc
-				_behavior_cooldown = BEHAVIOR_COOLDOWN_RESET
-				_do_natural_behavior()
-
-	var speed_mult := lerpf(0.45, 1.0, clampf(hunger / 0.65, 0.0, 1.0))
-
-	# ── Purposeful movement ───────────────────────────────────────────────────
-	if _on_arrive.is_valid():
-		var diff := _target_pos - global_position
-		if diff.length() < maxf(_arrive_dist, 2.0) or (_detour_timer <= 0.0 and diff.length() < _arrive_dist * 1.5) or _detour_count >= 3:
-			velocity      = Vector2.ZERO
-			_move_dir     = Vector2.ZERO
-			_arrive_dist  = ARRIVE_DIST_DEFAULT
-			_detour_count = 0
-			z_index = int(global_position.y)
-			var cb := _on_arrive
-			_on_arrive  = Callable()
-			_nav_target = ""
-			cb.call()
-		else:
-			_stuck_timer -= delta
-			if _stuck_timer <= 0.0:
-				if global_position.distance_to(_stuck_pos) < 6.0 and _detour_timer <= 0.0:
-					if _nav_target == "bed" and not _bed_is_free():
-						_nav_target = ""
-						_on_arrive  = Callable()
-						if bed_node and _bed_collision_disabled:
-							bed_node.set("collision_layer", 1)
-							_bed_collision_disabled = false
-						_change_anim_state(AnimState.SLEEP_PREPARE)
-						return
-					if diff.length() < _arrive_dist * 2.0:
-						velocity = Vector2.ZERO
-						_move_dir = Vector2.ZERO
-						_arrive_dist = 52.0
-						z_index = int(global_position.y)
-						var cb := _on_arrive
-						_on_arrive  = Callable()
-						_nav_target = ""
-						cb.call()
-						return
-					var perp := Vector2(-diff.y, diff.x).normalized() * (1.0 if randf() > 0.5 else -1.0)
-					_detour_dir   = (diff.normalized() * 0.3 + perp).normalized()
-					_detour_timer = randf_range(0.4, 0.8)
-				_stuck_pos   = global_position
-				_stuck_timer = 0.5
-
-			var target_vel : Vector2
-			if _detour_timer > 0.0:
-				_detour_timer -= delta
-				target_vel = _detour_dir * MOVE_SPEED * speed_mult
-			else:
-				target_vel = diff.normalized() * MOVE_SPEED * speed_mult
-
-			velocity = velocity.move_toward(target_vel, ACCELERATION * delta)
-			move_and_slide()
-
-			if get_slide_collision_count() > 0 and _detour_timer <= 0.0:
-				if _nav_target == "bed" and not _bed_is_free():
-					if bed_node and _bed_collision_disabled:
-						bed_node.set("collision_layer", 1)
-						_bed_collision_disabled = false
-					_nav_target = ""
-					_on_arrive  = Callable()
-					_change_anim_state(AnimState.SLEEP_PREPARE)
-					return
-				_detour_dir   = get_slide_collision(0).get_normal()
-				_detour_timer = 1.0
-				_detour_count += 1
-
-			_set_move_anim(true)
-			z_index = int(global_position.y)
+	if _is_frozen():
+		velocity = Vector2.ZERO
 		return
 
 	# ── Free wander ───────────────────────────────────────────────────────────
 	if _move_dir != Vector2.ZERO:
 		_wander_timer -= delta
 		if _wander_timer > 0.0:
-			var target_vel := _move_dir * MOVE_SPEED * speed_mult
-			velocity = velocity.move_toward(target_vel, ACCELERATION * delta)
+			var target_vel := _move_dir * _cfg.move_speed
+			velocity = velocity.move_toward(target_vel, _cfg.acceleration * delta)
 			move_and_slide()
 
-			if get_slide_collision_count() > 0 and _cat_bump_cooldown <= 0.0:
+			var _hit_pet := false
+			for _ci in get_slide_collision_count():
+				var _col := get_slide_collision(_ci)
+				if _col.get_collider() is Pet:
+					velocity      = Vector2.ZERO
+					_move_dir     = _col.get_normal()
+					_wander_timer = maxf(_wander_timer, 0.8)
+					_hit_pet      = true
+					break
+			if not _hit_pet and get_slide_collision_count() > 0 and _cat_bump_cooldown <= 0.0:
 				_move_dir          = get_slide_collision(0).get_normal()
 				_wander_timer      = 1.0
 				_cat_bump_cooldown = 1.0
 
 			_set_move_anim(true)
-			z_index = int(global_position.y)
 			return
 		# Timer hết: xoá hướng đi, để fall-through xuống idle (friction xử lý decel)
 		_move_dir = Vector2.ZERO
 
 	# ── Idle (kể cả friction coast sau khi wander dừng) ──────────────────────
-	velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+	velocity = velocity.move_toward(Vector2.ZERO, _cfg.friction * delta)
 	move_and_slide()
-	z_index = int(global_position.y)
 
-	if velocity.length_squared() > VEL_IDLE_THRESHOLD_SQ: return  # đang trượt dần, chưa đổi anim
+	if velocity.length_squared() > _cfg.vel_idle_threshold * _cfg.vel_idle_threshold: return  # đang trượt dần, chưa đổi anim
 
-	if _anim_state in [
-		AnimState.EAT_START, AnimState.EAT_LOOP, AnimState.EAT_END,
-		AnimState.DRINK_START, AnimState.DRINK_LOOP, AnimState.DRINK_END,
-		AnimState.SLEEP_PREPARE, AnimState.SLEEPING, AnimState.SLEEP_DONE,
-	]: return
 	if _anim_state in [AnimState.IDLE, AnimState.IDLE_RANDOM]: return
 	_change_anim_state(AnimState.IDLE)
 
@@ -434,41 +300,94 @@ func _physics_process(delta: float) -> void:
 
 func _tick_stats(delta: float) -> void:
 	if _anim_state == AnimState.SLEEPING:
-		energy = minf(energy + ENERGY_SLEEP_GAIN * delta, 1.0)
-		if energy >= ENERGY_FULL_THRESHOLD:
+		energy = minf(energy + _cfg.energy_sleep_gain * delta, 1.0)
+		if energy >= _cfg.energy_full_threshold:
 			_change_anim_state(AnimState.SLEEP_DONE)
 	else:
-		energy = maxf(energy - ENERGY_DECAY * delta, 0.0)
-	hunger = maxf(hunger - HUNGER_DECAY * delta, 0.0)
-	thirst = maxf(thirst - THIRST_DECAY * delta, 0.0)
+		energy = maxf(energy - _cfg.energy_decay * delta, 0.0)
+	hunger = maxf(hunger - _cfg.hunger_decay * delta, 0.0)
+	thirst = maxf(thirst - _cfg.thirst_decay * delta, 0.0)
 
-func _food_bowl_has_food() -> bool:
+func food_bowl_has_food() -> bool:
 	if not food_bowl: return false
 	var v = food_bowl.get("has_food")
 	return bool(v) if v != null else true
 
-func _water_bowl_has_water() -> bool:
+func water_bowl_has_water() -> bool:
 	if not water_bowl: return false
 	var v = water_bowl.get("has_water")
 	return bool(v) if v != null else true
+
+# ── Behavior system ───────────────────────────────────────────────────────────
+
+func _setup_behaviors() -> void:
+	_behaviors.clear()
+	_behaviors.append(EatBehavior.new())
+	_behaviors.append(DrinkBehavior.new())
+	_behaviors.append(SleepBehavior.new())
+	_behaviors.append_array(extra_behaviors)
+	_behaviors.sort_custom(func(a: PetBehavior, b: PetBehavior) -> bool: return a.priority > b.priority)
+
+## Cố gắng kích hoạt behavior đầu tiên phù hợp (theo priority).
+## Trả về true nếu có behavior được kích hoạt.
+func _evaluate_behaviors() -> bool:
+	for b: PetBehavior in _behaviors:
+		if b.enabled and b.should_activate(self):
+			if debug_log: print("[%s] behavior activated: %s" % [cat_name, b.get_class()])
+			b.activate(self)
+			return true
+	return false
+
+## Hook gọi ngay đầu sequence — override để thêm sound/signal trước khi mèo biến mất.
+func _on_teleport_triggered() -> void:
+	pass
+
+func _do_teleport_sequence(dest: Vector2, cb: Callable) -> void:
+	# Đóng băng ngay lập tức
+	velocity             = Vector2.ZERO
+	_move_dir            = Vector2.ZERO
+	_anim_state          = AnimState.IDLE     # _is_frozen() → true, physics không can thiệp
+	sprite.stop()
+	_shadow_sprite.stop()
+	_on_teleport_triggered()
+
+	var tw := create_tween()
+	tw.tween_interval(1.0)                                         # đứng yên 1s
+	tw.tween_property(self, "modulate:a", 0.0, 0.3)               # fade out
+	tw.tween_callback(func():                                      # teleport + reset
+		global_position = dest
+		velocity        = Vector2.ZERO
+		if _action_face_pos != Vector2.INF:
+			var face_left := _action_face_pos.x < dest.x
+			sprite.flip_h         = face_left
+			_shadow_sprite.flip_h = face_left)
+	tw.tween_property(self, "modulate:a", 1.0, 0.3)               # fade in
+	tw.tween_callback(func(): _change_anim_state(AnimState.IDLE)) # resume idle anim
+	tw.tween_interval(1.0)                                         # idle 1s trước action
+	tw.tween_callback(cb)                                          # bắt đầu ăn/ngủ
+
+## API gọi từ Behavior — lưu vị trí hiện tại rồi teleport tới item.
+## face_toward: global_position của item để mèo quay mặt đúng hướng sau khi teleport.
+func begin_action(dest: Vector2, action_cb: Callable, face_toward: Vector2 = Vector2.INF) -> void:
+	_pre_action_pos  = global_position
+	_action_item_pos = dest
+	_action_face_pos = face_toward
+	_do_teleport_sequence(dest, action_cb)
+
+## Sau khi action kết thúc, teleport về vị trí ngẫu nhiên gần item rồi tiếp tục.
+func _return_after_action() -> void:
+	var angle      := randf() * TAU
+	var dist       := randf_range(20.0, 50.0)
+	var return_pos := _action_item_pos + Vector2(cos(angle), sin(angle)) * dist
+	_do_teleport_sequence(return_pos, func(): _do_natural_behavior())
 
 # ── Natural behavior ──────────────────────────────────────────────────────────
 
 func _do_natural_behavior() -> void:
 	if _current_state == PetStateMachine.State.SLEEPING: return
-	if _anim_state == AnimState.SLEEPING and energy < ENERGY_FULL_THRESHOLD: return
-	# EAT/DRINK loop không gọi hàm này nên không cần guard is_busy ở đây
+	if _anim_state == AnimState.SLEEPING and energy < _cfg.energy_full_threshold: return
 
-	# Priority queue: ăn → uống → ngủ → hành vi bình thường
-	if hunger < URGENCY_THRESHOLD:
-		_decide_hunger()
-		return
-	if thirst < URGENCY_THRESHOLD:
-		_decide_thirst()
-		return
-	if energy < URGENCY_THRESHOLD:
-		_decide_sleep()
-		return
+	if _evaluate_behaviors(): return
 
 	if hunger > 0.65:
 		_decide_active()
@@ -479,85 +398,25 @@ func _decide_active() -> void:
 	var w := {}
 	w["idle"]   = 0.3 + _laziness  * 0.2
 	w["wander"] = 0.35 + _curiosity * 0.2
-
-	var active_others := _other_pets.filter(func(p: Pet) -> bool:
-		return p != self and p._current_state != PetStateMachine.State.SLEEPING)
-	if not active_others.is_empty():
-		w["follow"] = _affection * 0.2
-
-	var sleeping_others := _other_pets.filter(func(p: Pet) -> bool:
-		return p != self and p._current_state == PetStateMachine.State.SLEEPING)
-	if not sleeping_others.is_empty():
-		w["bother"] = _playfulness * 0.1
-
 	match _weighted_pick(w):
 		"idle":   _play_random_idle()
 		"wander": _start_wander(randf_range(1.0, 2.0))
-		"follow": _go_near_cat(active_others[randi() % active_others.size()])
-		"bother": _bother_cat(sleeping_others[0])
 		_:        _play_random_idle()
 
 func _decide_calm() -> void:
 	var w := {}
 	w["idle"]   = 0.3 + _laziness  * 0.2
 	w["wander"] = 0.3 + _curiosity * 0.1
-
-	var active_others := _other_pets.filter(func(p: Pet) -> bool:
-		return p != self and p._current_state != PetStateMachine.State.SLEEPING)
-	if not active_others.is_empty():
-		w["follow"] = _affection * 0.1
-
 	match _weighted_pick(w):
 		"idle":   _play_random_idle()
 		"wander": _start_wander(randf_range(1.0, 2.0))
-		"follow": _go_near_cat(active_others[randi() % active_others.size()])
 		_:        _play_random_idle()
 
-func _bowl_arrive_pos(bowl: Node2D) -> Vector2:
+func bowl_arrive_pos(bowl: Node2D) -> Vector2:
 	var spot := bowl.get_node_or_null("ArriveSpot") as Node2D
 	return spot.global_position if spot else bowl.global_position
 
-func _decide_thirst() -> void:
-	if _water_bowl_has_water():
-		water_bowl.set("collision_layer", 0)
-		_move_to(_bowl_arrive_pos(water_bowl))
-		_arrive_dist         = ARRIVE_DIST
-		_nav_target          = "water"
-		_interaction_timeout = NAV_TIMEOUT_BOWL
-		_on_arrive = func():
-			_nav_target = ""
-			if not _water_bowl_has_water():
-				water_bowl.set("collision_layer", 1)
-				_do_natural_behavior()
-				return
-			water_bowl.start_drink(self)
-	else:
-		_play_idle()
-
-func _decide_hunger() -> void:
-	if _food_bowl_has_food():
-		food_bowl.set("collision_layer", 0)
-		_move_to(_bowl_arrive_pos(food_bowl))
-		_arrive_dist         = ARRIVE_DIST
-		_nav_target          = "bowl"
-		_interaction_timeout = NAV_TIMEOUT_BOWL
-		_on_arrive = func():
-			_nav_target = ""
-			if not _food_bowl_has_food():
-				food_bowl.set("collision_layer", 1)
-				_do_natural_behavior()
-				return
-			food_bowl.start_feed(self)
-	else:
-		_play_idle()
-
-func _decide_sleep() -> void:
-	if bed_node and _bed_is_free():
-		_go_to_bed()
-	else:
-		_change_anim_state(AnimState.SLEEP_PREPARE)
-
-func _bed_is_free() -> bool:
+func bed_is_free() -> bool:
 	if not bed_node: return false
 	var sleep_spot := bed_node.get_node_or_null("SleepSpot") as Node2D
 	var dest := sleep_spot.global_position if sleep_spot else bed_node.global_position
@@ -565,8 +424,6 @@ func _bed_is_free() -> bool:
 		if not is_instance_valid(p): continue
 		var other := p as Pet
 		if other == null: continue
-		if other._nav_target == "bed" and other.bed_node == bed_node:
-			return false
 		if other.global_position.distance_to(dest) < 40.0:
 			if other._anim_state in [AnimState.SLEEPING, AnimState.SLEEP_PREPARE]:
 				return false
@@ -585,6 +442,7 @@ func _weighted_pick(weights: Dictionary) -> String:
 		if r <= cum: return key
 	return weights.keys()[-1]
 
+
 func _start_wander(duration: float) -> void:
 	var random_dir := Vector2(cos(randf() * TAU), sin(randf() * TAU))
 	var to_center  := _floor_center - global_position
@@ -592,60 +450,30 @@ func _start_wander(duration: float) -> void:
 	_move_dir     = (random_dir * 0.8 + center_dir * 0.2).normalized()
 	_wander_timer = duration
 
-func _go_near_cat(other: Pet) -> void:
-	var offset := Vector2(randf_range(-35.0, 35.0), randf_range(-15.0, 15.0))
-	_move_to(other.global_position + offset, randf_range(3.0, 8.0))
-
-func _bother_cat(other: Pet) -> void:
-	var offset := Vector2(randf_range(-20.0, 20.0), 0.0)
-	_move_to(other.global_position + offset, randf_range(2.0, 4.0))
-
-func _move_to(world_pos: Vector2, wait_after: float = 0.0) -> void:
-	_target_pos   = world_pos
-	_move_dir     = Vector2.ZERO
-	_detour_timer = 0.0
-	_detour_count = 0
-	_stuck_timer  = 0.5
-	_stuck_pos    = global_position
-	if wait_after > 0.0:
-		_on_arrive = func(): get_tree().create_timer(wait_after).timeout.connect(
-			func(): _do_natural_behavior())
 
 # ── State handling ────────────────────────────────────────────────────────────
 
 func _on_state_changed(new_state: int) -> void:
 	_current_state = new_state
-	if _anim_state in [
-		AnimState.EAT_START, AnimState.EAT_LOOP, AnimState.EAT_END,
-		AnimState.DRINK_START, AnimState.DRINK_LOOP, AnimState.DRINK_END,
-		AnimState.SLEEPING, AnimState.SLEEP_PREPARE
-	]: return
-	if _on_arrive.is_valid() or _move_dir != Vector2.ZERO:
-		return
+	if PetStateMachine.is_busy(_anim_state): return
+	if _move_dir != Vector2.ZERO: return
 	_kill_tween()
-	_on_arrive = Callable()
 	match new_state:
-		PetStateMachine.State.IDLE, PetStateMachine.State.HAPPY, \
-		PetStateMachine.State.TIRED, PetStateMachine.State.HUNGRY:
+		PetStateMachine.State.TIRED:
 			_play_idle()
+		PetStateMachine.State.IDLE, PetStateMachine.State.HAPPY, \
+		PetStateMachine.State.HUNGRY:
+			_play_random_idle()
 		PetStateMachine.State.SLEEPING:
-			_go_to_bed()
+			go_to_bed()
 
 # ── Bed ───────────────────────────────────────────────────────────────────────
 
-func _go_to_bed() -> void:
+func go_to_bed() -> void:
 	if bed_node:
 		var sleep_spot := bed_node.get_node_or_null("SleepSpot") as Node2D
 		var dest       := sleep_spot.global_position if sleep_spot else bed_node.global_position
-		bed_node.set("collision_layer", 0)
-		_bed_collision_disabled = true
-		_move_to(dest)
-		_arrive_dist         = ARRIVE_DIST
-		_nav_target          = "bed"
-		_interaction_timeout = NAV_TIMEOUT_BED
-		_on_arrive = func():
-			_nav_target = ""
-			_change_anim_state(AnimState.SLEEP_PREPARE)
+		begin_action(dest, func(): _change_anim_state(AnimState.SLEEP_PREPARE))
 	else:
 		_change_anim_state(AnimState.SLEEP_PREPARE)
 
@@ -655,7 +483,7 @@ func eat() -> void:
 	_change_anim_state(AnimState.EAT_START)
 
 func on_eat_completed() -> void:
-	hunger = minf(hunger + HUNGER_EAT_GAIN, 1.0)
+	hunger = minf(hunger + _cfg.hunger_eat_gain, 1.0)
 	_change_anim_state(AnimState.EAT_END)
 
 # ── Drink ─────────────────────────────────────────────────────────────────────
@@ -664,17 +492,17 @@ func drink() -> void:
 	_change_anim_state(AnimState.DRINK_START)
 
 func on_drink_completed() -> void:
-	thirst = minf(thirst + THIRST_DRINK_GAIN, 1.0)
+	thirst = minf(thirst + _cfg.thirst_drink_gain, 1.0)
 	_change_anim_state(AnimState.DRINK_END)
 
 # ── Idle animations ───────────────────────────────────────────────────────────
 
 func _play_idle() -> void:
-	if _on_arrive.is_valid() or _move_dir != Vector2.ZERO: return
+	if _move_dir != Vector2.ZERO: return
 	_change_anim_state(AnimState.IDLE)
 
 func _play_random_idle() -> void:
-	if _on_arrive.is_valid() or _move_dir != Vector2.ZERO: return
+	if _move_dir != Vector2.ZERO: return
 	var anims := ["idle3", "idle4", "idle6"]
 	if _last_idle_name != "":
 		var filtered := anims.filter(func(a: String) -> bool: return a != _last_idle_name)
@@ -702,13 +530,17 @@ func _set_move_anim(moving: bool) -> void:
 		_play(_current_idle_anim())
 		return
 	_anim_state = AnimState.WALK
-	var vel := velocity
-	if abs(vel.y) > abs(vel.x):
-		_play("walk_down" if vel.y > 0 else "walk_up")
+	# _move_dir đổi tức thì → không lag như velocity qua acceleration
+	# Khi _move_dir = 0 (friction coast) thì giữ hướng latch cuối
+	if _move_dir != Vector2.ZERO:
+		_last_walk_dir = _move_dir
+	var dir := _last_walk_dir
+	if abs(dir.y) > abs(dir.x):
+		_play("walk_down" if dir.y > 0 else "walk_up")
 		sprite.flip_h = false
 	else:
 		_play("walk_side")
-		sprite.flip_h = vel.x < 0
+		sprite.flip_h = dir.x < 0
 
 func _current_idle_anim() -> String:
 	if _current_state == PetStateMachine.State.SLEEPING: return "sleeping"
@@ -728,9 +560,8 @@ func force_anim(anim: String) -> void:
 		_play(anim)
 
 func place_at(world_pos: Vector2) -> void:
-	position    = world_pos
-	_spawn_pos  = world_pos
-	_target_pos = world_pos
+	position   = world_pos
+	_spawn_pos = world_pos
 
 func _kill_tween() -> void:
 	if _tween and _tween.is_valid(): _tween.kill()

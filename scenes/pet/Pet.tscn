@@ -1,19 +1,20 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://clyvh7rahg24g"]
 
-[ext_resource type="Script" path="res://scripts/pet/Pet.gd" id="script"]
+[ext_resource type="Script" uid="uid://brvi47djufou6" path="res://scripts/pet/Pet.gd" id="script"]
 
 [sub_resource type="CircleShape2D" id="shape"]
-radius = 22.0
+radius = 11.18034
 
-[node name="Pet" type="CharacterBody2D"]
+[node name="Pet" type="CharacterBody2D" unique_id=1600915098]
 script = ExtResource("script")
 
-[node name="ShadowSprite" type="AnimatedSprite2D" parent="."]
+[node name="ShadowSprite" type="AnimatedSprite2D" parent="." unique_id=243286079]
+position = Vector2(0, -20)
 scale = Vector2(0.28, 0.28)
 
-[node name="Sprite" type="AnimatedSprite2D" parent="."]
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1621251772]
+position = Vector2(0, -20)
 scale = Vector2(0.28, 0.28)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, 15)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1205213920]
 shape = SubResource("shape")

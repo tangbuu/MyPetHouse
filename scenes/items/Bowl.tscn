@@ -12,14 +12,13 @@ input_pickable = true
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=915517105]
 scale = Vector2(0.203, 0.203)
 texture = ExtResource("tex")
-offset = Vector2(0, -47.25)
+offset = Vector2(0, -0.45)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=755464110]
-position = Vector2(0, -9.5)
 shape = SubResource("shape")
 
 [node name="ArriveSpot" type="Marker2D" parent="." unique_id=97325489]
-position = Vector2(0, -17)
+position = Vector2(-18, 0)
 
 [node name="ShadowCaster" type="Node" parent="." unique_id=661231401]
 script = ExtResource("shadow_caster")

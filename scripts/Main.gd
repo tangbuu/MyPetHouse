@@ -181,7 +181,7 @@ func _build(data: Dictionary) -> void:
 		var pet      := (load(p["scene"]) as PackedScene).instantiate()
 		pet.name      = p["name"]
 		var spot      := _find_empty_floor_spot(used_spots, floor_pts)
-		pet.position   = spot
+		pet.position   = _room.to_local(spot)
 		used_spots.append(spot)
 		pet.set("standalone_anim", p.get("standalone_anim", ""))
 		pet.set("cat_name", p.get("cat_name", p["name"]))
@@ -198,7 +198,7 @@ func _build(data: Dictionary) -> void:
 		pet.set("water_bowl", _room.get_item_by_script("WaterBowl"))
 		pet.set("_floor_center", _room.center_world)
 		pet.visible = true
-		add_child(pet)
+		_room._world.add_child(pet)
 		pet_nodes.append(pet)
 		_pet_nodes.append(pet)
 
@@ -267,6 +267,7 @@ func _find_empty_floor_spot(used: Array[Vector2], floor_pts: PackedVector2Array)
 		Vector2(  0.0, 130.0), Vector2(-100.0, 90.0), Vector2(100.0,  90.0),
 		Vector2(-30.0,  55.0), Vector2( 30.0,  55.0), Vector2(  0.0, 110.0),
 	]
+	candidates.shuffle()
 	for candidate in candidates:
 		if not floor_pts.is_empty() and not Geometry2D.is_point_in_polygon(candidate, floor_pts):
 			continue
@@ -329,7 +330,7 @@ func _on_place_item(item_data: Dictionary) -> void:
 	_item_place_counter += 1
 	var inst_name : String = str(item_data["id"]) + "_i" + str(_item_place_counter)
 	node.name = inst_name
-	_room.add_child(node)
+	_room._world.add_child(node)
 	_room.register_item(inst_name, node)
 	node.position = _room._center.position
 
@@ -410,7 +411,7 @@ func _lower_from_canvas() -> void:
 	if not _drag_in_canvas or not _dragging_item: return
 	var ctf       := get_viewport().get_canvas_transform()
 	var world_pos := ctf.affine_inverse() * _dragging_item.position
-	_dragging_item.reparent(_room, false)
+	_dragging_item.reparent(_room._world, false)
 	_dragging_item.position = _room.to_local(world_pos)
 	_dragging_item.scale    = _drag_base_scale
 	_drag_in_canvas = false
@@ -877,6 +878,16 @@ func _build_debug_ui() -> void:
 	_add_shader_slider(vbox, "Intensity",  0.0,  3.0,  0.05,  1.0,   "%.2f", func(v: float): _light_intensity = v, "light_intensity")
 	_add_shader_slider(vbox, "IsoShear",  -1.0,  1.0,  0.05,  0.15,  "%.2f", func(v: float): _iso_shear = v, "iso_shear")
 	_add_shader_slider(vbox, "Feather",    0.0,  1.5,  0.05,  1.0,   "%.2f", func(v: float): _edge_feather = v, "edge_feather")
+
+	vbox.add_child(HSeparator.new())
+	_add_shader_slider(vbox, "Pet SprY", -60.0, 50.0, 1.0, -20.0, "%d",
+		func(v: float):
+			for pet in _pet_nodes:
+				if not is_instance_valid(pet): continue
+				var spr := pet.get_node_or_null("Sprite")
+				if spr: spr.position.y = v
+				var shadow := pet.get_node_or_null("ShadowSprite")
+				if shadow: shadow.position.y = v)
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"

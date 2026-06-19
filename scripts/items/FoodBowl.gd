@@ -2,19 +2,19 @@ extends StaticBody2D
 
 signal food_changed(amount: float)
 
-const EAT_DURATION            := 5.0
-const FOOD_PER_SESSION        := 0.25
-const COLLISION_RESTORE_DELAY := 2.0
+@export var config: PetConfig = null
 
 var has_food    : bool  = true
 var food_amount : float = 1.0
 
-var _feeding_pets : Array = []
-var _eat_timer    : float = 0.0
+var _feeding_pets : Array     = []
+var _eat_timer    : float     = 0.0
+var _cfg          : PetConfig
 
 @onready var _sprite : Sprite2D = $Sprite2D
 
 func _ready() -> void:
+	_cfg = config if config else PetConfig.new()
 	input_event.connect(_on_input_event)
 	_update_visual()
 
@@ -29,16 +29,15 @@ func start_feed(pet: Node) -> void:
 	if pet in _feeding_pets: return
 	_feeding_pets.append(pet)
 	if _eat_timer <= 0.0:
-		_eat_timer = EAT_DURATION
+		_eat_timer = _cfg.eat_duration
 	pet.eat()
 
 func _finish_feed() -> void:
-	get_tree().create_timer(COLLISION_RESTORE_DELAY).timeout.connect(func(): collision_layer = 1)
 	for pet in _feeding_pets:
 		if is_instance_valid(pet):
 			pet.on_eat_completed()
 	_feeding_pets.clear()
-	food_amount = maxf(food_amount - FOOD_PER_SESSION, 0.0)
+	food_amount = maxf(food_amount - _cfg.food_per_session, 0.0)
 	has_food    = food_amount > 0.05
 	_update_visual()
 	emit_signal("food_changed", food_amount)

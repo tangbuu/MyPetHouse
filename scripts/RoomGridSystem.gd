@@ -202,11 +202,7 @@ func place_item(item: Node2D, surface: String, col: int, row: int, w: int, d: in
 		item.position = cell_to_local(surface, col, row, w, h)
 	if item.has_meta("place_offset"):
 		item.position += item.get_meta("place_offset")
-	# z-order: floor items closer to viewer (higher row+col) render on top
-	if surface == "floor":
-		item.z_index = 1 + row + col
-	else:
-		item.z_index = 0  # wall items same level as grid
+	item.z_index = 0
 	item.set_meta("grid_surface", surface)
 	item.set_meta("grid_col",     col)
 	item.set_meta("grid_row",     row)

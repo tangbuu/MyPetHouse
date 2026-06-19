@@ -14,6 +14,7 @@ var _item_map     : Dictionary = {}
 var _object_grid  : Dictionary = {}
 var grid_system   : RoomGridSystem = null
 var _grid_overlay : Node2D         = null
+var _world        : Node2D         = null
 
 var center_world : Vector2:
 	get: return _center.global_position if _center else global_position
@@ -30,6 +31,7 @@ func _editor_rebuild() -> void:
 	_object_grid.clear()
 	grid_system   = null
 	_grid_overlay = null
+	_world        = null
 
 	if room_data_path == "" or not FileAccess.file_exists(room_data_path): return
 	var file := FileAccess.open(room_data_path, FileAccess.READ)
@@ -68,6 +70,12 @@ func build(data: Dictionary) -> void:
 	grid_system.name = "GridSystem"
 	add_child(grid_system)
 	grid_system.setup(data)
+
+	# ── World (y_sort container for all items + pets) ─────────────────────────
+	_world = Node2D.new()
+	_world.name = "World"
+	_world.y_sort_enabled = true
+	add_child(_world)
 
 	# ── Decorations ───────────────────────────────────────────────────────────
 	for dec : Dictionary in data.get("decorations", []):
@@ -112,7 +120,7 @@ func build(data: Dictionary) -> void:
 						(child as Sprite2D).scale = _v2(item["sprite_scale"])
 					break
 		node.name = item["name"]
-		add_child(node)
+		_world.add_child(node)
 		# Godot may sanitise the name (e.g. "@" → "_") — keep entry in sync
 		if node.name != item["name"]:
 			item["name"] = node.name

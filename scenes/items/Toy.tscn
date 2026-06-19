@@ -13,10 +13,10 @@ linear_damp = 4.0
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=941668037]
 scale = Vector2(0.21, 0.21)
 texture = ExtResource("tex")
-offset = Vector2(0, -25.2)
+offset = Vector2(0, -1.39)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1609597377]
-position = Vector2(0, -5)
+position = Vector2(0, 0)
 shape = SubResource("shape")
 
 [node name="ShadowCaster" type="Node" parent="."]

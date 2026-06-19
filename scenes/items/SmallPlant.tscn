@@ -11,10 +11,10 @@ size = Vector2(11.5, 5.699998)
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=309513755]
 scale = Vector2(0.203, 0.203)
 texture = ExtResource("tex")
-offset = Vector2(0, -38.85)
+offset = Vector2(0, -28.26)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1796928599]
-position = Vector2(0.25, -2.150001)
+position = Vector2(0.25, 0)
 shape = SubResource("shape")
 
 [node name="ShadowCaster" type="Node" parent="."]

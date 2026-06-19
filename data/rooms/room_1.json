@@ -26,7 +26,7 @@
       "name": "bowl_food_5_i10",
       "position": [
         55.787,
-        25.519
+        16.019
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Bowl.tscn",
@@ -35,14 +35,14 @@
       "texture": "res://assets/item/bowl/food/bowl_5.png"
     },
     {
-      "grid_col": 7,
+      "grid_col": 11,
       "grid_row": 0,
       "grid_surface": "floor",
       "id": "fountain_2",
       "name": "fountain_2_i12",
       "position": [
-        97.025,
-        16.853
+        151.926,
+        39.296
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Fountain.tscn",
@@ -51,13 +51,13 @@
     },
     {
       "grid_col": 0,
-      "grid_row": 7,
+      "grid_row": 13,
       "grid_surface": "floor",
       "id": "cat_tree_2",
       "name": "cat_tree_2_i13",
       "position": [
-        -96.475,
-        12.753
+        -179.123,
+        54.568
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/CatTree.tscn",
@@ -66,13 +66,13 @@
     },
     {
       "grid_col": 0,
-      "grid_row": 13,
+      "grid_row": 10,
       "grid_surface": "floor",
       "id": "shelf_1",
       "name": "shelf_1_i14",
       "position": [
-        -184.948,
-        61.386
+        -143.624,
+        35.478
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Shelf.tscn",
@@ -80,14 +80,14 @@
       "texture": "res://assets/item/shelf/shelf_1.png"
     },
     {
-      "grid_col": 3,
+      "grid_col": 2,
       "grid_row": 4,
       "grid_surface": "wall_right",
       "id": "window_1",
       "name": "window_1_i15",
       "position": [
-        76.472,
-        -94.632
+        62.75,
+        -103.646
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Window.tscn",
@@ -95,14 +95,14 @@
       "texture": "res://assets/item/window/window_1.png"
     },
     {
-      "grid_col": 4,
-      "grid_row": 0,
+      "grid_col": 10,
+      "grid_row": 3,
       "grid_surface": "floor",
       "id": "fountain_2",
       "name": "fountain_2_i16",
       "position": [
-        55.849,
-        -6.054
+        96.969,
+        53.642
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Fountain.tscn",
@@ -110,14 +110,14 @@
       "texture": "res://assets/item/fountain/fountain_2.png"
     },
     {
-      "grid_col": 10,
-      "grid_row": 6,
+      "grid_col": 9,
+      "grid_row": 4,
       "grid_surface": "wall_left",
       "id": "wall_lamp_1",
       "name": "wall_lamp_1_i18",
       "position": [
-        -150.556,
-        -47.611
+        -136.778,
+        -83.861
       ],
       "scale_x": -1.0,
       "scene": "res://scenes/items/WallLamp.tscn",
@@ -132,7 +132,7 @@
       "name": "bed_large_1_i19",
       "position": [
         1.001,
-        -7.957
+        -29.457
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/CatBed.tscn",
@@ -140,14 +140,14 @@
       "texture": "res://assets/item/bed_large/bed_large_1.png"
     },
     {
-      "grid_col": 3,
-      "grid_row": 10,
+      "grid_col": 1,
+      "grid_row": 7,
       "grid_surface": "floor",
       "id": "bowl_water_3",
       "name": "bowl_water_3_i20",
       "position": [
-        -95.531,
-        63.142
+        -81.728,
+        16.173
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Bowl.tscn",
@@ -163,7 +163,7 @@
       "name": "Pet",
       "position": [
         270.0,
-        460.0
+        481.0
       ],
       "scene": "res://scenes/pet/Pet.tscn",
       "standalone_anim": ""
@@ -174,7 +174,7 @@
       "name": "PetSofull",
       "position": [
         345.0,
-        555.0
+        576.0
       ],
       "scene": "res://scenes/pet/Pet.tscn",
       "standalone_anim": ""
