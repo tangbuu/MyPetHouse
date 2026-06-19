@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://lkujttrvwv4q"]
 
+[ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://4he33v5bgof7" path="res://assets/item/bowl/food/bowl_1.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
@@ -18,4 +19,7 @@ position = Vector2(0, -9.5)
 shape = SubResource("shape")
 
 [node name="ArriveSpot" type="Marker2D" parent="." unique_id=97325489]
-position = Vector2(0, -10)
+position = Vector2(0, -17)
+
+[node name="ShadowCaster" type="Node" parent="." unique_id=661231401]
+script = ExtResource("shadow_caster")

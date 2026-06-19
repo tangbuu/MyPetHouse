@@ -2,8 +2,9 @@ extends StaticBody2D
 
 signal food_changed(amount: float)
 
-const EAT_DURATION     := 5.0
-const FOOD_PER_SESSION := 0.25
+const EAT_DURATION            := 5.0
+const FOOD_PER_SESSION        := 0.25
+const COLLISION_RESTORE_DELAY := 2.0
 
 var has_food    : bool  = true
 var food_amount : float = 1.0
@@ -32,10 +33,10 @@ func start_feed(pet: Node) -> void:
 	pet.eat()
 
 func _finish_feed() -> void:
-	collision_layer = 1
+	get_tree().create_timer(COLLISION_RESTORE_DELAY).timeout.connect(func(): collision_layer = 1)
 	for pet in _feeding_pets:
 		if is_instance_valid(pet):
-			pet.stop_eat()
+			pet.on_eat_completed()
 	_feeding_pets.clear()
 	food_amount = maxf(food_amount - FOOD_PER_SESSION, 0.0)
 	has_food    = food_amount > 0.05

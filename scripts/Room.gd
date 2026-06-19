@@ -117,7 +117,8 @@ func build(data: Dictionary) -> void:
 		if node.name != item["name"]:
 			item["name"] = node.name
 		_item_map[node.name] = node
-		node.set_meta("item_id", item.get("id", item["name"]))
+		node.set_meta("item_id",   item.get("id", item["name"]))
+		node.set_meta("sceneName", item.get("sceneName", ""))
 
 		# Look up grid dimensions from objectGrid.json by sceneName
 		var og_def : Dictionary = _object_grid.get(item.get("sceneName", ""), {})
@@ -173,6 +174,21 @@ func build(data: Dictionary) -> void:
 
 func get_item(item_name: String) -> Node:
 	return _item_map.get(item_name, null)
+
+# Tìm item đầu tiên có sceneName khớp (dùng khi pet data dùng tên scene thay vì instance name)
+func get_item_by_scene(scene_name: String) -> Node:
+	for node in _item_map.values():
+		if node.get_meta("sceneName", "") == scene_name:
+			return node
+	return null
+
+# Tìm item đầu tiên có script khớp với tên file (vd: "FoodBowl", "WaterBowl", "CatBed")
+func get_item_by_script(script_basename: String) -> Node:
+	for node in _item_map.values():
+		var scr = node.get_script()
+		if scr and (scr as Script).resource_path.get_file().get_basename() == script_basename:
+			return node
+	return null
 
 func register_item(item_name: String, node: Node) -> void:
 	_item_map[item_name] = node

@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://c4bkt0h5t26t0"]
 
+[ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://p63pa8ri1l0l" path="res://assets/item/bed_small/bed_small_1.png" id="tex"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
@@ -17,4 +18,7 @@ position = Vector2(-0.099999994, -21.5)
 shape = SubResource("shape")
 
 [node name="SleepSpot" type="Marker2D" parent="." unique_id=1285591880]
-position = Vector2(0, -52)
+position = Vector2(1, -33)
+
+[node name="ShadowCaster" type="Node" parent="." unique_id=2146460901]
+script = ExtResource("shadow_caster")

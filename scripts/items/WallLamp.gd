@@ -8,7 +8,8 @@ var _sheet : Texture2D = preload("res://assets/item/lamp/lamp_sheet.png")
 # Global registry — Main reads this to feed positions to the night shader
 static var all_lamps : Array = []
 
-var is_on : bool = false
+var is_on       : bool  = false
+var _last_hours : float = -1.0
 
 func _ready() -> void:
 	_sprite.texture        = _sheet
@@ -20,7 +21,11 @@ func _enter_tree() -> void:
 		all_lamps.append(self)
 
 func _process(_delta: float) -> void:
-	_update(DataManager.game_time_hours)
+	var h := DataManager.game_time_hours
+	if h == _last_hours:
+		return
+	_last_hours = h
+	_update(h)
 
 func _update(hours: float) -> void:
 	var alpha: float

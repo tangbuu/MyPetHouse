@@ -14,143 +14,177 @@
 | **Monetization** | Free-to-play (cosmetics only, no pay-to-win) |
 | **Target Release** | TBD |
 | **Team Size** | Solo / Indie |
-| **AI Integration** | Gemini Nano (on-device) + Gemini 2.0 Flash (online) |
 
 ### Elevator Pitch
-> Nuôi một con thú ảo có AI — nó trò chuyện, phản ứng theo cảm xúc thật, và có thể **nhảy ra ngoài màn hình** để đồng hành cùng bạn suốt cả ngày.
+> Nuôi một con thú ảo cute — chăm sóc, trang trí phòng, và customize ngoại hình thú theo phong cách riêng.
 
 ---
 
-## Concept
+## Core Loop
 
-### Core Loop
 ```
-Chăm sóc thú → Thú lớn lên → Unlock tính cách / hình dáng mới → Chăm sóc sâu hơn
-```
-
-### Unique Selling Points
-1. **AI Personality** — mỗi thú có tính cách riêng, trả lời tự nhiên qua Gemini
-2. **Overlay Mode** — thú nhảy ra ngoài, đi lại trên màn hình kể cả khi dùng app khác (Android)
-3. **Screen Awareness** — thú có thể "nhìn" màn hình và comment (Gemini Vision)
-4. **Offline-first** — Gemini Nano xử lý reactions cơ bản không cần internet
-
----
-
-## AI Integration
-
-| Tình huống | AI sử dụng | Cost |
-|---|---|---|
-| Reaction cơ bản (happy, sad, hungry) | Gemini Nano (on-device) | Free hoàn toàn |
-| Trò chuyện với thú | Gemini 2.0 Flash | Free tier (1500 req/ngày) |
-| Thú nhìn màn hình và comment | Gemini 2.0 Flash Vision | Free tier |
-| Phát hiện cảm xúc user qua camera | MediaPipe (on-device) | Free hoàn toàn |
-
-### AI Personality System
-- Mỗi thú có **personality prompt** riêng khi khởi tạo
-- Lịch sử hội thoại lưu local (giới hạn 20 messages gần nhất)
-- Thú nhớ tên user, sở thích, thói quen
-
----
-
-## Basic Actions
-
-### Pet States (Trạng thái)
-```
-IDLE          — đứng yên, thở nhẹ, nhìn xung quanh
-HAPPY         — nhảy, vẫy đuôi, xoay tròn
-SAD           — cúi đầu, mắt rớm nước
-HUNGRY        — nhìn food bowl, bụng kêu
-TIRED         — ngáp, mắt nặng dần
-SLEEPING      — nằm, ZZZ animation
-SICK          — xanh mặt, loạng choạng
-ANGRY         — mặt đỏ, dậm chân
-EXCITED       — chạy lòng vòng
-BORED         — nhìn trái nhìn phải, thở dài
-LOVE          — tim nổi lên, ánh mắt long lanh
-```
-
-### User-triggered Actions
-```
-EAT           — cho ăn → animation nhai → Hunger +
-DRINK         — uống nước → Hunger/Energy +
-PET           — chạm vào thú → Happy burst → Happiness +
-PLAY          — mini game ngắn → Happiness + / Energy -
-SLEEP         — cho ngủ / tự ngủ khi Tired → Energy recover
-BATH          — kéo bọt xà phòng → Cleanliness +
-TALK          — gọi AI conversation → Happiness +
-GIFT          — nhận item → Excited animation
-MEDICINE      — khi Sick → Health recover
-LEVELUP       — đủ EXP → celebration animation + evolution option
-```
-
-### Overlay Actions (ngoài màn hình)
-```
-WANDER        — đi bộ ngang màn hình
-REACT         — comment về app đang dùng (Gemini Vision)
-TAP_ESCAPE    — user tap → thú chạy trốn sang góc khác
-IDLE_FLOAT    — ngồi góc màn hình, thỉnh thoảng nhìn lên
-DRAG          — user kéo thú đến vị trí khác
-SLEEP_CORNER  — ngủ ở góc màn hình khi Energy thấp
-NOTIFICATION  — rung nhẹ + animation khi thú cần gì đó
+Chăm sóc thú → Kiếm coins/gems → Mua item/skin → Trang trí phòng + Customize thú
 ```
 
 ---
 
 ## Stats System
 
+| Stat | Range | Decay | Recovery |
+|---|---|---|---|
+| Hunger | 0–100 | -0.5/s (debug) / -1/15 phút thực | +30 khi ăn |
+| Thirst | 0–100 | -0.4/s (debug) / -1/12 phút thực | +30 khi uống |
+| Energy | 0–100 | -0.1/s (debug) / -1/1 giờ thực | +2/s khi ngủ |
+| Happiness | 0–100 | -0.15/s (debug) / -1/30 phút thực | +15 khi được vuốt |
+
+### State Machine
+
+| State | Điều kiện |
+|---|---|
+| IDLE | Mặc định |
+| HAPPY | Sau khi feed/water/pet (override 2 giây) |
+| HUNGRY | Hunger < 20 |
+| TIRED | Energy < 20 |
+| SLEEPING | is_sleeping = true |
+
+---
+
+## Pet Behavior
+
+Mèo hoạt động tự động dựa theo stats và personality:
+
+- **Wander** — đi loanh quanh phòng ngẫu nhiên
+- **Eat** — tự đi đến FoodBowl khi Hunger < 30
+- **Drink** — tự đi đến WaterBowl/Fountain khi Thirst < 30
+- **Sleep** — tự đi đến CatBed khi Energy < 30
+- **Follow** — đi lại gần mèo khác (theo Affection)
+- **Bother** — quấy phá mèo đang ngủ (theo Playfulness)
+
+Mỗi mèo có 4 personality traits ngẫu nhiên khi spawn: `laziness`, `playfulness`, `affection`, `curiosity` — ảnh hưởng xác suất chọn hành động.
+
+### Animations hiện có
+
+| Animation | Mô tả |
+|---|---|
+| idle / idle3 / idle4 / idle6 | Ngồi yên, các biểu cảm ngẫu nhiên |
+| walk_side / walk_up / walk_down | Di chuyển 3 hướng |
+| eat_start / eat_loop / eat_end | Ăn |
+| drink_start / drink_loop / drink_end | Uống |
+| sleep_prepare / sleeping / sleep_done | Ngủ |
+| tired | Mệt mỏi |
+| sofull | No bụng nằm ngửa |
+
+---
+
+## Cat Customization System
+
+*(Planned — Layered Sprite System)*
+
+Mỗi con mèo được render bằng nhiều lớp chồng nhau, tất cả share cùng animation sheets:
+
 ```
-Hunger        0–100   giảm -1 mỗi 15 phút thực
-Happiness     0–100   giảm -1 mỗi 30 phút thực
-Energy        0–100   giảm khi play, recover khi sleep
-Cleanliness   0–100   giảm -1 mỗi 1 giờ thực
-Health        0–100   bị kéo xuống nếu stats khác < 20
-EXP                   tăng theo mọi interaction
-Level         1–50    mỗi level unlock content mới
+Pet
+├── BodySprite (AnimatedSprite2D)     ← base cat, modulate = fur color
+├── PatternSprite (AnimatedSprite2D)  ← markings/spots/stripes overlay
+└── AccessorySprite (Sprite2D)        ← item đeo trên người (hat, collar...)
 ```
 
-### Stat Consequence
-| Stat | Nếu = 0 | Effect |
+### Cat Style Config
+
+```gdscript
+{
+  "id": "spotted",
+  "base_color": Color(...),
+  "pattern_sheets": { "idle": "res://...", "walk_side": "res://...", ... },
+  "pattern_color": Color(...)
+}
+```
+
+### Art cần cho mỗi style mới
+- Pattern sheets (chỉ vẽ phần marking, nền transparent) — 1 sheet/animation
+- 1 entry config — không cần code mới
+
+---
+
+## Room System
+
+- Room load từ JSON (`data/rooms/room_1.json`)
+- Background: ảnh hoặc màu solid
+- Grid system: chia surface `floor`, `wall_left`, `wall_right` thành ô isometric
+- Items snap vào ô grid khi đặt
+- Room state lưu về JSON sau mỗi thay đổi
+
+### Items hiện có
+
+| Item | Surface | Mô tả |
 |---|---|---|
-| Hunger | Starving | Health -2/giờ, Angry state |
-| Happiness | Depressed | Từ chối tương tác, Sad state |
-| Energy | Exhausted | Tự ngủ, không play được |
-| Cleanliness | Dirty | Sick chance tăng |
-| Health | Critical | Animation bệnh nặng, cần medicine |
+| FoodBowl | floor | Cho mèo ăn |
+| WaterBowl | floor | Cho mèo uống |
+| Fountain | floor | Cho mèo uống |
+| CatBed (small/large) | floor | Mèo ngủ |
+| CatTree | floor | Đồ chơi leo trèo |
+| Toy (9 loại) | floor | Đồ chơi |
+| Plant (small/large) | floor | Trang trí |
+| Shelf | floor | Trang trí |
+| WallDeco / WallDecoBig / WallDecoMid | wall | Trang trí tường |
+| Window (4 loại) | wall | Cửa sổ |
+| WallLamp | wall | Đèn (có hiệu ứng ánh sáng đêm) |
 
 ---
 
-## Progression System
+## Shop & Economy
 
-### Evolution Path (ví dụ)
-```
-Egg → Baby (Lv 1–10) → Child (Lv 11–25) → Adult (Lv 26–40) → Legend (Lv 41–50)
-```
-- Mỗi stage thay đổi sprite + mở thêm personality traits
-- User chọn hướng evolution dựa trên cách chăm sóc
+### Currency
+- **Coins** — kiếm từ chăm sóc thú, dùng mua items thường
+- **Gems** — premium, dùng mua items đặc biệt
+
+### Shop
+- Tab: Items, Offers, Top-up
+- Sub-tab: phân loại theo category (từ `data/shop.json`)
+- Hỗ trợ limited stock (badge xN)
+- Sort theo giá tăng/giảm
+
+### Bag
+- Hiển thị items đã mua
+- Drag item từ bag vào phòng để đặt
+- Drag item trong phòng về bag để thu hồi
 
 ---
 
-## Monetization (cosmetics only)
+## UI Structure
 
-- Skin / outfit cho thú
-- Background / nhà mới
-- Accessory (mũ, kính, đồ chơi)
-- Tất cả có thể earn in-game (chậm hơn) hoặc mua (không ảnh hưởng gameplay)
+```
+HUD (CanvasLayer)
+├── StatsWidget       — avatar, player name, level, game time
+├── CurrencyContainer — coin + gem display
+├── ShopBtn / BagBtn  — mở Shop / Bag panel
+├── ShopPanel         — cửa hàng mua items
+└── BagPanel          — kho đồ + drag-to-place
+```
+
+### Visual Theme
+- Pixel art style, font Jersey 25
+- Màu chủ đạo: nâu ấm, kem, tan
+- Buttons: 4 theme màu (brown, cream, pink, tan)
 
 ---
 
-## Tech Stack
+## Game Time
 
-```
-Engine        Godot 4.x
-Language      GDScript
-AI (offline)  Gemini Nano via Android GMS API
-AI (online)   Gemini 2.0 Flash REST API
-Vision AI     Gemini 2.0 Flash (screenshot → comment)
-Face detect   MediaPipe (on-device)
-Overlay       Android SYSTEM_ALERT_WINDOW (native plugin)
-Storage       Local SQLite (stats, chat history, save data)
-```
+- 1 giây thực = 1 phút game (scale 1/60)
+- Hiển thị dạng 12-hour (6:00 AM → 11:59 PM → ...)
+- Night overlay shader: tối dần từ 11:00 PM, sáng lại từ 6:00 AM
+- WallLamp tạo vùng sáng cục bộ trong đêm
+
+---
+
+## Save System
+
+| File | Nội dung |
+|---|---|
+| `user://player_data.json` | coins, gems, player name, level, game time |
+| `user://inventory.json` | danh sách item đã mua |
+| `res://data/rooms/room_1.json` | trạng thái phòng (items, positions, background) |
 
 ---
 
@@ -158,9 +192,9 @@ Storage       Local SQLite (stats, chat history, save data)
 
 | Phase | Nội dung | Status |
 |---|---|---|
-| Phase 1 | Core pet + stats + basic actions | Planning |
-| Phase 2 | AI conversation (Gemini Flash) | Planning |
-| Phase 3 | Overlay mode (Android plugin) | Planning |
-| Phase 4 | Screen awareness (Vision AI) | Planning |
-| Phase 5 | Progression + evolution | Planning |
-| Phase 6 | Monetization + polish | Planning |
+| Phase 1 | Core pet + stats + room + shop + bag | ✅ Done |
+| Phase 2 | Cat Customization (Layered Sprite System) | 🔲 Next |
+| Phase 3 | Accessory system (item on pet) | 🔲 Planned |
+| Phase 4 | Progression + leveling + evolution | 🔲 Planned |
+| Phase 5 | Multiple rooms | 🔲 Planned |
+| Phase 6 | Polish + monetization balancing | 🔲 Planned |

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://c8c6hv727ey7h"]
 
 [ext_resource type="Texture2D" uid="uid://dq582j2vhqdh5" path="res://assets/item/plant/plant_1.png" id="tex"]
+[ext_resource type="Script" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 
 [sub_resource type="RectangleShape2D" id="shape"]
 size = Vector2(11.5, 5.699998)
@@ -15,3 +16,6 @@ offset = Vector2(0, -38.85)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1796928599]
 position = Vector2(0.25, -2.150001)
 shape = SubResource("shape")
+
+[node name="ShadowCaster" type="Node" parent="."]
+script = ExtResource("shadow_caster")

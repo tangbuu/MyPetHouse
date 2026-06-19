@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://b4rsv53nxp5rq"]
 
 [ext_resource type="Texture2D" uid="uid://d2yujjjj4jlx1" path="res://assets/item/toy/toy_2.png" id="tex"]
+[ext_resource type="Script" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 
 [sub_resource type="CircleShape2D" id="shape"]
 radius = 6.3
@@ -17,3 +18,6 @@ offset = Vector2(0, -25.2)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1609597377]
 position = Vector2(0, -5)
 shape = SubResource("shape")
+
+[node name="ShadowCaster" type="Node" parent="."]
+script = ExtResource("shadow_caster")

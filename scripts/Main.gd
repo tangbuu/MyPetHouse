@@ -32,6 +32,8 @@ var _drag_canvas        : CanvasLayer = null
 var _drag_in_canvas     : bool        = false
 var _drag_offset_canvas : Vector2     = Vector2.ZERO
 var _drag_base_scale    : Vector2     = Vector2.ONE
+var _drag_bag_was_open  : bool        = false
+var _drag_screen_pos    : Vector2     = Vector2.ZERO
 
 # Grid drag state
 var _drag_w               : int    = 1
@@ -45,7 +47,6 @@ var _drag_preferred_surf  : String = ""
 
 var _camera        : Camera2D = null
 var _cam_origin    : Vector2  = Vector2.ZERO
-var _zoom_level    : float    = 1.0
 const ZOOM_MIN     := 1.0
 const ZOOM_MAX     := 2.5
 var _active_touches  : int        = 0
@@ -57,6 +58,9 @@ const PAN_THRESHOLD               := 8.0
 
 var _item_place_counter : int = 0
 
+const _LAMP_PARAMS := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
+var _vp_size : Vector2 = Vector2.ZERO
+
 var _pet_nodes       : Array[Node2D]  = []
 var _pet_labels      : Array[Label]   = []
 var _hunger_sliders  : Array[HSlider] = []
@@ -67,6 +71,8 @@ var _thirst_dragging : Array[bool]    = []
 var _energy_dragging : Array[bool]    = []
 
 func _ready() -> void:
+	_vp_size = get_viewport().get_visible_rect().size
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_load_room(room_data_path)
 	_setup_camera()
 	_hud.edit_mode_toggled.connect(_set_edit_mode)
@@ -90,25 +96,29 @@ func _setup_night_overlay() -> void:
 	_night_overlay.color = Color(1, 1, 1, 1)  # driven entirely by shader
 	_night_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_night_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_night_overlay.size = get_viewport().get_visible_rect().size
+	_night_overlay.size = _vp_size
 	_night_shader = ShaderMaterial.new()
 	_night_shader.shader = load("res://shaders/night_overlay.gdshader")
 	_night_overlay.material = _night_shader
 	layer.add_child(_night_overlay)
+	# Static shader params — only update on change, not every frame
+	_night_shader.set_shader_parameter("viewport_size",  _vp_size)
+	_night_shader.set_shader_parameter("light_intensity", _light_intensity)
+	_night_shader.set_shader_parameter("iso_shear",       _iso_shear)
+	_night_shader.set_shader_parameter("edge_feather",    _edge_feather)
 
 func _setup_camera() -> void:
 	_camera = Camera2D.new()
-	var vp := get_viewport().get_visible_rect().size
-	_cam_origin = vp / 2.0
+	_cam_origin = _vp_size / 2.0
 	_camera.position = _cam_origin
 	_camera.zoom = Vector2(ZOOM_MIN, ZOOM_MIN)
 	add_child(_camera)
 	_camera.make_current()
 
 func _clamp_camera() -> void:
-	var vp := get_viewport().get_visible_rect().size
-	var lx := vp.x / 2.0 * (1.0 - 1.0 / _zoom_level)
-	var ly := vp.y / 2.0 * (1.0 - 1.0 / _zoom_level)
+	var z  := _camera.zoom.x
+	var lx := _vp_size.x / 2.0 * (1.0 - 1.0 / z)
+	var ly := _vp_size.y / 2.0 * (1.0 - 1.0 / z)
 	_camera.position = Vector2(
 		clamp(_camera.position.x, _cam_origin.x - lx, _cam_origin.x + lx),
 		clamp(_camera.position.y, _cam_origin.y - ly, _cam_origin.y + ly)
@@ -144,7 +154,7 @@ func _build(data: Dictionary) -> void:
 			_bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			add_child(_bg_rect)
 			_bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_bg_rect.size    = get_viewport().get_visible_rect().size
+		_bg_rect.size    = _vp_size
 		_bg_rect.texture = load(bg_img)
 		_bg_rect.visible = true
 		_bg.visible      = false
@@ -176,9 +186,16 @@ func _build(data: Dictionary) -> void:
 		pet.set("standalone_anim", p.get("standalone_anim", ""))
 		pet.set("cat_name", p.get("cat_name", p["name"]))
 		var bed_name: String = p.get("bed_item", "")
-		pet.set("bed_node",      _room.get_item(bed_name) if bed_name != "" else null)
-		pet.set("food_bowl",     _room.get_item("FoodBowl"))
-		pet.set("water_bowl",    _room.get_item("WaterBowl"))
+		var bed_node: Node = null
+		if bed_name != "":
+			bed_node = _room.get_item(bed_name)
+			if not bed_node:
+				bed_node = _room.get_item_by_scene(bed_name)
+			if not bed_node:
+				bed_node = _room.get_item_by_script(bed_name)
+		pet.set("bed_node",   bed_node)
+		pet.set("food_bowl",  _room.get_item_by_script("FoodBowl"))
+		pet.set("water_bowl", _room.get_item_by_script("WaterBowl"))
 		pet.set("_floor_center", _room.center_world)
 		pet.visible = true
 		add_child(pet)
@@ -201,26 +218,22 @@ func _process(delta: float) -> void:
 			alpha = 0.65
 		else:
 			alpha = lerpf(0.65, 0.0, (t - 21.0) / 3.0)
-		var vp  := get_viewport().get_visible_rect().size
 		var ctf := get_viewport().get_canvas_transform()
-		_night_shader.set_shader_parameter("overlay_color",  Color(0.04, 0.04, 0.18, alpha))
-		_night_shader.set_shader_parameter("viewport_size",  vp)
+		_night_shader.set_shader_parameter("overlay_color",     Color(0.04, 0.04, 0.18, alpha))
 		# Scale light radius with canvas zoom so the glow stays the same world-space size
 		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
-		_night_shader.set_shader_parameter("light_intensity", _light_intensity)
-		_night_shader.set_shader_parameter("iso_shear",      _iso_shear)
-		_night_shader.set_shader_parameter("edge_feather",   _edge_feather)
-		var lamp_params := ["light_pos_0", "light_pos_1", "light_pos_2", "light_pos_3"]
 		var lamps := WallLamp.all_lamps
 		for i in 4:
 			var lamp_uv := Vector2(-9.0, -9.0)
 			if i < lamps.size() and alpha > 0.0:
 				var lamp := lamps[i] as Node2D
 				if lamp and lamp.is_inside_tree() and (lamp as WallLamp).is_on:
-					var base_uv := (ctf * lamp.global_position) / vp
+					var base_uv := (ctf * lamp.global_position) / _vp_size
 					var x_sign  : float = sign(0.5 - base_uv.x)  # +1 tường trái, -1 tường phải, 0 tường sau
-					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * x_sign, _light_y_offset))) / vp
-			_night_shader.set_shader_parameter(lamp_params[i], lamp_uv)
+					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * x_sign, _light_y_offset))) / _vp_size
+			_night_shader.set_shader_parameter(_LAMP_PARAMS[i], lamp_uv)
+
+	_hud.set_bag_drop_highlight(_dragging_item != null and _hud.is_bag_panel_hovered(_drag_screen_pos))
 
 	if _hold_active and not _edit_mode:
 		_hold_timer += delta
@@ -228,9 +241,6 @@ func _process(delta: float) -> void:
 			_hold_active = false
 			_hold_timer  = 0.0
 			_hud.enter_edit_mode()
-			var bag_names := _room.placed_item_ids() if _room else []
-			var bag_rtex  : String = _room_data.get("room_texture", "")
-			_hud.open_bag(bag_names, bag_rtex)
 			call_deferred("_try_start_drag", _hold_pos)
 
 	for i in min(_pet_nodes.size(), _pet_labels.size()):
@@ -239,7 +249,9 @@ func _process(delta: float) -> void:
 		var h := float(pet.get("hunger"))
 		var t := float(pet.get("thirst"))
 		var e := float(pet.get("energy"))
-		_pet_labels[i].text = pet.name + "  H:%.0f%%  T:%.0f%%  E:%.0f%%" % [h * 100, t * 100, e * 100]
+		var new_text := pet.name + "  H:%.0f%%  T:%.0f%%  E:%.0f%%" % [h * 100, t * 100, e * 100]
+		if _pet_labels[i].text != new_text:
+			_pet_labels[i].text = new_text
 		if not _hunger_dragging[i]:
 			_hunger_sliders[i].set_value_no_signal(h)
 		if not _thirst_dragging[i]:
@@ -343,6 +355,8 @@ func _on_place_item(item_data: Dictionary) -> void:
 	# doesn't immediately trigger _end_drag() via _unhandled_input.
 	_pending_item      = node
 	_pending_item_data = item_data
+	_drag_bag_was_open = true
+	_hud.close_bag()
 	if not _edit_mode:
 		_hud.enter_edit_mode()
 	call_deferred("_start_pending_drag", node, gw, gd, gh, gsurf)
@@ -368,7 +382,7 @@ func _start_pending_drag(node: Node2D, gw: int, gd: int, gh: int, gsurf: String)
 	_set_item_collision(node, false)
 	_drag_base_scale = Vector2(absf(node.scale.x), node.scale.y)
 	if _drag_in_canvas:
-		node.scale *= _zoom_level
+		node.scale *= _camera.zoom.x
 
 # ── Edit mode ─────────────────────────────────────────────────────────────────
 
@@ -389,7 +403,7 @@ func _lift_to_canvas(item: Node2D, world_start: Vector2) -> void:
 	_drag_offset_canvas = item_vp - ctf * world_start
 	item.reparent(_drag_canvas, false)
 	item.position   = item_vp
-	item.scale      *= _zoom_level
+	item.scale      *= _camera.zoom.x
 	_drag_in_canvas = true
 
 func _lower_from_canvas() -> void:
@@ -402,6 +416,13 @@ func _lower_from_canvas() -> void:
 	_drag_in_canvas = false
 
 func _input(event: InputEvent) -> void:
+	# Capture bag state here — _input fires before gui_input (backdrop close) and _unhandled_input.
+	if not _dragging_item:
+		if (event is InputEventScreenTouch and event.pressed and _active_touches == 0) \
+				or (event is InputEventMouseButton and event.pressed \
+					and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT):
+			_drag_bag_was_open = _hud.is_bag_open()
+
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			_touch_positions[event.index] = event.position
@@ -429,16 +450,16 @@ func _input(event: InputEvent) -> void:
 			var new_dist := (vals[0] as Vector2).distance_to(vals[1])
 			var factor   := new_dist / _pinch_distance
 			_pinch_distance = new_dist
-			_zoom_level = clamp(_zoom_level * factor, ZOOM_MIN, ZOOM_MAX)
-			_camera.zoom = Vector2(_zoom_level, _zoom_level)
+			var nz : float = clamp(_camera.zoom.x * factor, ZOOM_MIN, ZOOM_MAX)
+			_camera.zoom = Vector2(nz, nz)
 			_clamp_camera()
 		get_viewport().set_input_as_handled()
 		return
 
 	# Trackpad pinch (Mac)
 	if event is InputEventMagnifyGesture:
-		_zoom_level = clamp(_zoom_level * event.factor, ZOOM_MIN, ZOOM_MAX)
-		_camera.zoom = Vector2(_zoom_level, _zoom_level)
+		var nz : float = clamp(_camera.zoom.x * event.factor, ZOOM_MIN, ZOOM_MAX)
+		_camera.zoom = Vector2(nz, nz)
 		_clamp_camera()
 		get_viewport().set_input_as_handled()
 		return
@@ -455,7 +476,7 @@ func _input(event: InputEvent) -> void:
 		if _pan_distance >= PAN_THRESHOLD: _is_panning = true
 		_is_pan = _is_panning
 	if _is_pan:
-		_camera.position -= event.relative / _zoom_level
+		_camera.position -= event.relative / _camera.zoom.x
 		_clamp_camera()
 		_hold_active = false
 		_hold_timer  = 0.0
@@ -463,8 +484,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if not _dragging_item: return
 	if event is InputEventMouseMotion:
+		_drag_screen_pos = get_viewport().get_mouse_position()
 		if _drag_in_canvas:
-			_dragging_item.position = get_viewport().get_mouse_position() + _drag_offset_canvas + Vector2(0, -80)
+			_dragging_item.position = _drag_screen_pos + _drag_offset_canvas + Vector2(0, -80)
 			var world := get_viewport().get_canvas_transform().affine_inverse() * _dragging_item.position
 			_update_drag_highlight(_room.to_local(world) + _drag_foot_offset)
 		else:
@@ -472,8 +494,9 @@ func _input(event: InputEvent) -> void:
 			_dragging_item.position = lp + _drag_offset
 			_update_drag_highlight(_dragging_item.position + _drag_foot_offset)
 	elif event is InputEventScreenDrag:
+		_drag_screen_pos = event.position
 		if _drag_in_canvas:
-			_dragging_item.position = event.position + _drag_offset_canvas + Vector2(0, -80)
+			_dragging_item.position = _drag_screen_pos + _drag_offset_canvas + Vector2(0, -80)
 			var world := get_viewport().get_canvas_transform().affine_inverse() * _dragging_item.position
 			_update_drag_highlight(_room.to_local(world) + _drag_foot_offset)
 		else:
@@ -481,9 +504,11 @@ func _input(event: InputEvent) -> void:
 			_dragging_item.position = lp + _drag_offset
 			_update_drag_highlight(_dragging_item.position + _drag_foot_offset)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		_drag_screen_pos = event.position
 		_end_drag()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenTouch and not event.pressed:
+		_drag_screen_pos = event.position
 		_end_drag()
 		get_viewport().set_input_as_handled()
 
@@ -518,6 +543,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					_hold_timer  = 0.0
 					_hold_pos    = gpos
 		else:
+			_drag_screen_pos = event.position
 			_hold_active = false
 			_hold_timer  = 0.0
 
@@ -578,6 +604,9 @@ func _try_start_drag(global_pos: Vector2) -> void:
 				break
 
 	if not best: return
+
+	if _drag_bag_was_open:
+		_hud.close_bag()
 
 	_dragging_item    = best
 	_drag_offset      = best.position - local_pos
@@ -651,11 +680,14 @@ func _update_drag_highlight(local_pos: Vector2) -> void:
 func _end_drag() -> void:
 	if not _dragging_item: return
 	_room.clear_highlight()
+	_hud.set_bag_drop_highlight(false)
 	_lower_from_canvas()
 	_set_item_collision(_dragging_item, true)
+	var bag_was_open := _drag_bag_was_open
+	_drag_bag_was_open = false
 
 	# Drop onto bag panel → return item to bag
-	if _hud.is_bag_panel_hovered(get_viewport().get_mouse_position()):
+	if _hud.is_bag_panel_hovered(_drag_screen_pos):
 		var is_pending := _dragging_item == _pending_item
 		var item_name  := _dragging_item.name
 		var items : Array = _room_data.get("items", [])
@@ -672,9 +704,10 @@ func _end_drag() -> void:
 			_pending_item_data = {}
 		_save_room_data()
 		_hud.exit_edit_mode()
-		var bag_names_r := _room.placed_item_ids() if _room else []
-		var bag_rtex_r  : String = _room_data.get("room_texture", "")
-		_hud.open_bag(bag_names_r, bag_rtex_r)
+		if bag_was_open:
+			var bag_names_r := _room.placed_item_ids() if _room else []
+			var bag_rtex_r  : String = _room_data.get("room_texture", "")
+			_hud.open_bag(bag_names_r, bag_rtex_r)
 		return
 
 	var gs   := _room.grid_system
@@ -714,9 +747,10 @@ func _end_drag() -> void:
 			_drag_preferred_surf = ""
 			_save_room_data()
 			_hud.exit_edit_mode()
-			var bag_names_f := _room.placed_item_ids() if _room else []
-			var bag_rtex_f  : String = _room_data.get("room_texture", "")
-			_hud.open_bag(bag_names_f, bag_rtex_f)
+			if bag_was_open:
+				var bag_names_f := _room.placed_item_ids() if _room else []
+				var bag_rtex_f  : String = _room_data.get("room_texture", "")
+				_hud.open_bag(bag_names_f, bag_rtex_f)
 			return
 		elif gs and _drag_origin_surface != "":
 			gs.place_item(_dragging_item, _drag_origin_surface,
@@ -733,14 +767,13 @@ func _end_drag() -> void:
 	_drag_origin_row     = -1
 	_drag_preferred_surf = ""
 	_hud.exit_edit_mode()
-	var bag_names : Array  = _room.placed_item_ids() if _room else []
-	var bag_rtex  : String = _room_data.get("room_texture", "")
 	if was_pending:
 		_pending_item      = null
 		_pending_item_data = {}
+	if bag_was_open:
+		var bag_names : Array  = _room.placed_item_ids() if _room else []
+		var bag_rtex  : String = _room_data.get("room_texture", "")
 		_hud.open_bag(bag_names, bag_rtex)
-	else:
-		_hud.refresh_bag(bag_names, bag_rtex)
 
 func _save_room_data() -> void:
 	var gs := _room.grid_system if _room else null
@@ -760,6 +793,15 @@ func _save_room_data() -> void:
 	if not file: return
 	file.store_string(JSON.stringify(_room_data, "  "))
 	file.close()
+
+func _on_viewport_size_changed() -> void:
+	_vp_size = get_viewport().get_visible_rect().size
+	if _night_overlay:
+		_night_overlay.size = _vp_size
+	if _bg_rect:
+		_bg_rect.size = _vp_size
+	if _night_shader:
+		_night_shader.set_shader_parameter("viewport_size", _vp_size)
 
 # ── Debug UI ──────────────────────────────────────────────────────────────────
 
@@ -828,150 +870,13 @@ func _build_debug_ui() -> void:
 	vbox.add_child(time_slider)
 
 	# Lamp shader debug
-	var lamp_sep := HSeparator.new()
-	vbox.add_child(lamp_sep)
-	var lamp_row := HBoxContainer.new()
-	var lamp_title := Label.new()
-	lamp_title.text = "Radius"
-	lamp_title.add_theme_font_size_override("font_size", 11)
-	lamp_title.custom_minimum_size = Vector2(46, 0)
-	lamp_row.add_child(lamp_title)
-	var lamp_val_lbl := Label.new()
-	lamp_val_lbl.text = "0.23"
-	lamp_val_lbl.add_theme_font_size_override("font_size", 11)
-	lamp_val_lbl.custom_minimum_size = Vector2(32, 0)
-	lamp_row.add_child(lamp_val_lbl)
-	vbox.add_child(lamp_row)
-	var lamp_r_slider := HSlider.new()
-	lamp_r_slider.min_value = 0.05
-	lamp_r_slider.max_value = 0.8
-	lamp_r_slider.step      = 0.01
-	lamp_r_slider.value     = 0.23
-	lamp_r_slider.custom_minimum_size = Vector2(90, 20)
-	lamp_r_slider.value_changed.connect(func(v: float):
-		lamp_val_lbl.text = "%.2f" % v
-		_base_light_radius = v)
-	vbox.add_child(lamp_r_slider)
-
-	# Y offset slider
-	var y_row := HBoxContainer.new()
-	var y_title := Label.new()
-	y_title.text = "Y Offset"
-	y_title.add_theme_font_size_override("font_size", 11)
-	y_title.custom_minimum_size = Vector2(46, 0)
-	y_row.add_child(y_title)
-	var y_val_lbl := Label.new()
-	y_val_lbl.text = "-49"
-	y_val_lbl.add_theme_font_size_override("font_size", 11)
-	y_val_lbl.custom_minimum_size = Vector2(32, 0)
-	y_row.add_child(y_val_lbl)
-	vbox.add_child(y_row)
-	var y_slider := HSlider.new()
-	y_slider.min_value = -100.0
-	y_slider.max_value = 100.0
-	y_slider.step      = 1.0
-	y_slider.value     = -49.0
-	y_slider.custom_minimum_size = Vector2(90, 20)
-	y_slider.value_changed.connect(func(v: float):
-		y_val_lbl.text = "%d" % int(v)
-		_light_y_offset = v)
-	vbox.add_child(y_slider)
-
-	# X offset slider
-	var x_row := HBoxContainer.new()
-	var x_title := Label.new()
-	x_title.text = "X Offset"
-	x_title.add_theme_font_size_override("font_size", 11)
-	x_title.custom_minimum_size = Vector2(46, 0)
-	x_row.add_child(x_title)
-	var x_val_lbl := Label.new()
-	x_val_lbl.text = "1"
-	x_val_lbl.add_theme_font_size_override("font_size", 11)
-	x_val_lbl.custom_minimum_size = Vector2(32, 0)
-	x_row.add_child(x_val_lbl)
-	vbox.add_child(x_row)
-	var x_slider := HSlider.new()
-	x_slider.min_value = -100.0
-	x_slider.max_value = 100.0
-	x_slider.step      = 1.0
-	x_slider.value     = 1.0
-	x_slider.custom_minimum_size = Vector2(90, 20)
-	x_slider.value_changed.connect(func(v: float):
-		x_val_lbl.text = "%d" % int(v)
-		_light_x_offset = v)
-	vbox.add_child(x_slider)
-
-	# Intensity slider
-	var int_row := HBoxContainer.new()
-	var int_title := Label.new()
-	int_title.text = "Intensity"
-	int_title.add_theme_font_size_override("font_size", 11)
-	int_title.custom_minimum_size = Vector2(46, 0)
-	int_row.add_child(int_title)
-	var int_val_lbl := Label.new()
-	int_val_lbl.text = "1.00"
-	int_val_lbl.add_theme_font_size_override("font_size", 11)
-	int_val_lbl.custom_minimum_size = Vector2(32, 0)
-	int_row.add_child(int_val_lbl)
-	vbox.add_child(int_row)
-	var int_slider := HSlider.new()
-	int_slider.min_value = 0.0
-	int_slider.max_value = 3.0
-	int_slider.step      = 0.05
-	int_slider.value     = 1.0
-	int_slider.custom_minimum_size = Vector2(90, 20)
-	int_slider.value_changed.connect(func(v: float):
-		int_val_lbl.text = "%.2f" % v
-		_light_intensity = v)
-	vbox.add_child(int_slider)
-
-	# Iso Shear slider
-	var shear_row := HBoxContainer.new()
-	var shear_title := Label.new()
-	shear_title.text = "IsoShear"
-	shear_title.add_theme_font_size_override("font_size", 11)
-	shear_title.custom_minimum_size = Vector2(46, 0)
-	shear_row.add_child(shear_title)
-	var shear_val_lbl := Label.new()
-	shear_val_lbl.text = "0.15"
-	shear_val_lbl.add_theme_font_size_override("font_size", 11)
-	shear_val_lbl.custom_minimum_size = Vector2(32, 0)
-	shear_row.add_child(shear_val_lbl)
-	vbox.add_child(shear_row)
-	var shear_slider := HSlider.new()
-	shear_slider.min_value = -1.0
-	shear_slider.max_value = 1.0
-	shear_slider.step      = 0.05
-	shear_slider.value     = 0.15
-	shear_slider.custom_minimum_size = Vector2(90, 20)
-	shear_slider.value_changed.connect(func(v: float):
-		shear_val_lbl.text = "%.2f" % v
-		_iso_shear = v)
-	vbox.add_child(shear_slider)
-
-	# Edge Feather slider
-	var feath_row := HBoxContainer.new()
-	var feath_title := Label.new()
-	feath_title.text = "Feather"
-	feath_title.add_theme_font_size_override("font_size", 11)
-	feath_title.custom_minimum_size = Vector2(46, 0)
-	feath_row.add_child(feath_title)
-	var feath_val_lbl := Label.new()
-	feath_val_lbl.text = "1.00"
-	feath_val_lbl.add_theme_font_size_override("font_size", 11)
-	feath_val_lbl.custom_minimum_size = Vector2(32, 0)
-	feath_row.add_child(feath_val_lbl)
-	vbox.add_child(feath_row)
-	var feath_slider := HSlider.new()
-	feath_slider.min_value = 0.0
-	feath_slider.max_value = 1.5
-	feath_slider.step      = 0.05
-	feath_slider.value     = 1.0
-	feath_slider.custom_minimum_size = Vector2(90, 20)
-	feath_slider.value_changed.connect(func(v: float):
-		feath_val_lbl.text = "%.2f" % v
-		_edge_feather = v)
-	vbox.add_child(feath_slider)
+	vbox.add_child(HSeparator.new())
+	_add_shader_slider(vbox, "Radius",    0.05, 0.8,    0.01, 0.23,  "%.2f", func(v: float): _base_light_radius = v)
+	_add_shader_slider(vbox, "Y Offset", -100.0, 100.0, 1.0, -49.0,  "%d",   func(v: float): _light_y_offset = v)
+	_add_shader_slider(vbox, "X Offset", -100.0, 100.0, 1.0,  1.0,   "%d",   func(v: float): _light_x_offset = v)
+	_add_shader_slider(vbox, "Intensity",  0.0,  3.0,  0.05,  1.0,   "%.2f", func(v: float): _light_intensity = v, "light_intensity")
+	_add_shader_slider(vbox, "IsoShear",  -1.0,  1.0,  0.05,  0.15,  "%.2f", func(v: float): _iso_shear = v, "iso_shear")
+	_add_shader_slider(vbox, "Feather",    0.0,  1.5,  0.05,  1.0,   "%.2f", func(v: float): _edge_feather = v, "edge_feather")
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"
@@ -998,6 +903,34 @@ func _build_debug_ui() -> void:
 		vbox.add_child(btn)
 
 	call_deferred("_build_stats_ui", vbox)
+
+func _add_shader_slider(vbox: VBoxContainer, label: String,
+		min_v: float, max_v: float, step_v: float, init_v: float,
+		fmt: String, setter: Callable, shader_param: String = "") -> void:
+	var row := HBoxContainer.new()
+	var title := Label.new()
+	title.text = label
+	title.add_theme_font_size_override("font_size", 11)
+	title.custom_minimum_size = Vector2(46, 0)
+	row.add_child(title)
+	var val_lbl := Label.new()
+	val_lbl.text = fmt % init_v
+	val_lbl.add_theme_font_size_override("font_size", 11)
+	val_lbl.custom_minimum_size = Vector2(32, 0)
+	row.add_child(val_lbl)
+	vbox.add_child(row)
+	var slider := HSlider.new()
+	slider.min_value = min_v
+	slider.max_value = max_v
+	slider.step      = step_v
+	slider.value     = init_v
+	slider.custom_minimum_size = Vector2(90, 20)
+	slider.value_changed.connect(func(v: float):
+		val_lbl.text = fmt % v
+		setter.call(v)
+		if shader_param != "" and _night_shader:
+			_night_shader.set_shader_parameter(shader_param, v))
+	vbox.add_child(slider)
 
 func _build_stats_ui(vbox: VBoxContainer) -> void:
 	vbox.add_child(HSeparator.new())
@@ -1066,34 +999,20 @@ func _build_stats_ui(vbox: VBoxContainer) -> void:
 		var idx := i
 		h_slider.drag_started.connect(func(): _hunger_dragging[idx] = true)
 		h_slider.drag_ended.connect(func(_c): _hunger_dragging[idx] = false)
-		h_slider.value_changed.connect(func(v: float): _set_pet_hunger(idx, v))
+		h_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "hunger", v))
 
 		t_slider.drag_started.connect(func(): _thirst_dragging[idx] = true)
 		t_slider.drag_ended.connect(func(_c): _thirst_dragging[idx] = false)
-		t_slider.value_changed.connect(func(v: float): _set_pet_thirst(idx, v))
+		t_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "thirst", v))
 
 		e_slider.drag_started.connect(func(): _energy_dragging[idx] = true)
 		e_slider.drag_ended.connect(func(_c): _energy_dragging[idx] = false)
-		e_slider.value_changed.connect(func(v: float): _set_pet_energy(idx, v))
+		e_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "energy", v))
 
-func _set_pet_hunger(idx: int, v: float) -> void:
+func _set_pet_stat(idx: int, prop: String, v: float) -> void:
 	var pet := _pet_nodes[idx]
 	if not is_instance_valid(pet): return
-	pet.set("hunger", v)
-	pet.set("_move_dir",     Vector2.ZERO)
-	pet.set("_wander_timer", 0.0)
-
-func _set_pet_thirst(idx: int, v: float) -> void:
-	var pet := _pet_nodes[idx]
-	if not is_instance_valid(pet): return
-	pet.set("thirst", v)
-	pet.set("_move_dir",     Vector2.ZERO)
-	pet.set("_wander_timer", 0.0)
-
-func _set_pet_energy(idx: int, v: float) -> void:
-	var pet := _pet_nodes[idx]
-	if not is_instance_valid(pet): return
-	pet.set("energy", v)
+	pet.set(prop, v)
 	pet.set("_move_dir",     Vector2.ZERO)
 	pet.set("_wander_timer", 0.0)
 
@@ -1111,14 +1030,14 @@ func _force_all_pets(anim: String) -> void:
 			pet.eat()
 			var p := pet
 			get_tree().create_timer(3.0).timeout.connect(func():
-				if is_instance_valid(p) and p.has_method("stop_eat"):
-					p.stop_eat())
+				if is_instance_valid(p) and p.has_method("on_eat_completed"):
+					p.on_eat_completed())
 		elif anim == "drink" and pet.has_method("drink"):
 			pet.drink()
 			var p := pet
 			get_tree().create_timer(3.0).timeout.connect(func():
-				if is_instance_valid(p) and p.has_method("stop_drink"):
-					p.stop_drink())
+				if is_instance_valid(p) and p.has_method("on_drink_completed"):
+					p.on_drink_completed())
 		elif pet.has_method("force_anim"):
 			pet.force_anim(anim)
 

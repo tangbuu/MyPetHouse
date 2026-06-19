@@ -2,9 +2,10 @@ extends StaticBody2D
 
 signal water_changed(amount: float)
 
-const DRINK_DURATION       := 3.0  # seconds per drink session
-const WATER_PER_SESSION    := 0.2  # depleted per drink → 5 drinks = empty
-const DRINK_THIRST_RESTORE := 1.0  # fully restores thirst
+const DRINK_DURATION          := 3.0  # seconds per drink session
+const WATER_PER_SESSION       := 0.2  # depleted per drink → 5 drinks = empty
+const DRINK_THIRST_RESTORE    := 1.0  # fully restores thirst
+const COLLISION_RESTORE_DELAY := 2.0  # same value as Pet.COLLISION_RESTORE_DELAY
 
 var has_water    : bool  = true
 var water_amount : float = 1.0
@@ -34,11 +35,10 @@ func start_drink(pet: Node) -> void:
 		pet.drink()
 
 func _finish_drink() -> void:
-	collision_layer = 1
+	get_tree().create_timer(COLLISION_RESTORE_DELAY).timeout.connect(func(): collision_layer = 1)
 	if _drinking_pet and is_instance_valid(_drinking_pet):
-		_drinking_pet.set("thirst", 1.0)
-		if _drinking_pet.has_method("stop_drink"):
-			_drinking_pet.stop_drink()
+		if _drinking_pet.has_method("on_drink_completed"):
+			_drinking_pet.on_drink_completed()
 	_drinking_pet = null
 	water_amount  = maxf(water_amount - WATER_PER_SESSION, 0.0)
 	has_water     = water_amount > 0.05
