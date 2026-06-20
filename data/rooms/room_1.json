@@ -19,22 +19,6 @@
   "id": "room_1",
   "items": [
     {
-      "grid_col": 6,
-      "grid_row": 2,
-      "grid_surface": "floor",
-      "id": "bowl_food_5",
-      "name": "bowl_food_5_i10",
-      "position": [
-        55.787,
-        16.019
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Bowl.tscn",
-      "sceneName": "Bowl",
-      "script": "res://scripts/items/FoodBowl.gd",
-      "texture": "res://assets/item/bowl/food/bowl_5.png"
-    },
-    {
       "grid_col": 11,
       "grid_row": 0,
       "grid_surface": "floor",
@@ -140,36 +124,36 @@
       "texture": "res://assets/item/bed_large/bed_large_1.png"
     },
     {
-      "grid_col": 1,
-      "grid_row": 7,
+      "grid_col": 14,
+      "grid_row": 11,
+      "grid_surface": "floor",
+      "id": "bowl_food_2",
+      "name": "bowl_food_2_i25",
+      "position": [
+        42.042,
+        134.187
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/FoodBowl.gd",
+      "texture": "res://assets/item/bowl/food/bowl_2.png"
+    },
+    {
+      "grid_col": 13,
+      "grid_row": 14,
       "grid_surface": "floor",
       "id": "bowl_water_3",
-      "name": "bowl_water_3_i20",
+      "name": "bowl_water_3_i27",
       "position": [
-        -81.728,
-        16.173
+        -12.924,
+        148.625
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Bowl.tscn",
       "sceneName": "Bowl",
       "script": "res://scripts/items/WaterBowl.gd",
       "texture": "res://assets/item/bowl/water/bowl_3.png"
-    },
-    {
-      "grid_col": 3,
-      "grid_row": 13,
-      "grid_surface": "floor",
-      "id": "bowl_water_11",
-      "name": "bowl_water_11_i21",
-      "position": [
-        -136.827,
-        76.272
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Bowl.tscn",
-      "sceneName": "Bowl",
-      "script": "res://scripts/items/WaterBowl.gd",
-      "texture": "res://assets/item/bowl/water/bowl_11.png"
     }
   ],
   "pets": [

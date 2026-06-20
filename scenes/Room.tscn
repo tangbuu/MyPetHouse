@@ -2,6 +2,18 @@
 
 [ext_resource type="Script" uid="uid://c6s6e4gtvfhlo" path="res://scripts/Room.gd" id="script"]
 
+[sub_resource type="RectangleShape2D" id="shape_w1"]
+size = Vector2(284, 10)
+
+[sub_resource type="RectangleShape2D" id="shape_w2"]
+size = Vector2(279, 10)
+
+[sub_resource type="RectangleShape2D" id="shape_w3"]
+size = Vector2(278, 10)
+
+[sub_resource type="RectangleShape2D" id="shape_w4"]
+size = Vector2(283, 10)
+
 [node name="Room" type="Node2D" unique_id=1781405327]
 position = Vector2(270, 680)
 scale = Vector2(1.055, 1.055)
@@ -9,3 +21,33 @@ script = ExtResource("script")
 
 [node name="Center" type="Marker2D" parent="." unique_id=209196427]
 position = Vector2(-0.94786745, 61.611374)
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="Wall1" type="StaticBody2D" parent="Walls"]
+position = Vector2(-123, 9)
+rotation = 2.634
+
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall1"]
+shape = SubResource("shape_w1")
+
+[node name="Wall2" type="StaticBody2D" parent="Walls"]
+position = Vector2(-123, 142)
+rotation = 0.476
+
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall2"]
+shape = SubResource("shape_w2")
+
+[node name="Wall3" type="StaticBody2D" parent="Walls"]
+position = Vector2(124, 142)
+rotation = -0.478
+
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall3"]
+shape = SubResource("shape_w3")
+
+[node name="Wall4" type="StaticBody2D" parent="Walls"]
+position = Vector2(124, 9)
+rotation = -2.632
+
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall4"]
+shape = SubResource("shape_w4")

@@ -50,6 +50,7 @@ var _camera        : Camera2D = null
 var _cam_origin    : Vector2  = Vector2.ZERO
 const ZOOM_MIN     := 1.0
 const ZOOM_MAX     := 2.5
+const ZOOM_INIT    := 1.4
 var _active_touches  : int        = 0
 var _touch_positions : Dictionary = {}
 var _pinch_distance  : float      = 0.0
@@ -113,7 +114,7 @@ func _setup_camera() -> void:
 	_camera = Camera2D.new()
 	_cam_origin = _vp_size / 2.0
 	_camera.position = _cam_origin
-	_camera.zoom = Vector2(ZOOM_MIN, ZOOM_MIN)
+	_camera.zoom = Vector2(ZOOM_INIT, ZOOM_INIT)
 	add_child(_camera)
 	_camera.make_current()
 

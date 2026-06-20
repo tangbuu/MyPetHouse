@@ -26,6 +26,7 @@ func _ready() -> void:
 func _editor_rebuild() -> void:
 	for child in get_children():
 		if child == _center: continue
+		if child.name == "Walls": continue
 		child.free()
 	_item_map.clear()
 	_object_grid.clear()
@@ -167,16 +168,7 @@ func build(data: Dictionary) -> void:
 	grid.call("setup", data)
 	_grid_overlay = grid
 
-	# ── Walls ─────────────────────────────────────────────────────────────────
-	for w : Dictionary in data.get("walls", []):
-		var wall     := StaticBody2D.new()
-		wall.position = _v2(w["position"])
-		wall.rotation = float(w["rotation"])
-		var col       := CollisionShape2D.new()
-		col.shape      = RectangleShape2D.new()
-		(col.shape as RectangleShape2D).size = _v2(w["size"])
-		wall.add_child(col)
-		add_child(wall)
+	# Walls are placed directly in Room.tscn for visual editing in the editor.
 
 # ── Public API ────────────────────────────────────────────────────────────────
 

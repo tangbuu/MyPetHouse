@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://nuw77q8icnj5"
-path="res://.godot/imported/bubble_pink.png-dd009161fd693b491cd68e41be08ef33.ctex"
+uid="uid://yxq3qjsxv2d1"
+path="res://.godot/imported/player_idle_sheet.png-13a78181d30552b3b34a615b935aef9e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/UI/cat_icons/bubble_pink.png"
-dest_files=["res://.godot/imported/bubble_pink.png-dd009161fd693b491cd68e41be08ef33.ctex"]
+source_file="res://assets/player/player_idle_sheet.png"
+dest_files=["res://.godot/imported/player_idle_sheet.png-13a78181d30552b3b34a615b935aef9e.ctex"]
 
 [params]
 
