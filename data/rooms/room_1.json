@@ -79,14 +79,14 @@
       "texture": "res://assets/item/bed_large/bed_large_1.png"
     },
     {
-      "grid_col": 5,
-      "grid_row": 6,
+      "grid_col": 6,
+      "grid_row": 9,
       "grid_surface": "floor",
       "id": "bowl_food_2",
       "name": "bowl_food_2_i25",
       "position": [
-        -12.973,
-        30.897
+        -40.504,
+        60.761
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Bowl.tscn",
@@ -95,14 +95,14 @@
       "texture": "res://assets/item/bowl/food/bowl_2.png"
     },
     {
-      "grid_col": 13,
-      "grid_row": 14,
+      "grid_col": 10,
+      "grid_row": 10,
       "grid_surface": "floor",
       "id": "bowl_water_3",
       "name": "bowl_water_3_i27",
       "position": [
-        -12.924,
-        148.625
+        0.757,
+        97.597
       ],
       "scale_x": 1.0,
       "scene": "res://scenes/items/Bowl.tscn",
