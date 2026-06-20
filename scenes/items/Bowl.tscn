@@ -3,8 +3,8 @@
 [ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://4he33v5bgof7" path="res://assets/item/bowl/food/bowl_1.png" id="tex"]
 
-[sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(27, 21)
+[sub_resource type="CircleShape2D" id="CircleShape2D_03irp"]
+radius = 7.071068
 
 [node name="Bowl" type="StaticBody2D" unique_id=1226059982]
 input_pickable = true
@@ -15,7 +15,7 @@ texture = ExtResource("tex")
 offset = Vector2(0, -0.45)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=755464110]
-shape = SubResource("shape")
+shape = SubResource("CircleShape2D_03irp")
 
 [node name="ArriveSpot" type="Marker2D" parent="." unique_id=97325489]
 position = Vector2(-18, 0)

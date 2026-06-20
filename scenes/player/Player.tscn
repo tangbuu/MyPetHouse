@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://ijckndsmw2u6"]
+
+[ext_resource type="Script" uid="uid://cjwb7rbux3fd8" path="res://scripts/player/CharacterColorManager.gd" id="color_mgr_script"]
+[ext_resource type="Texture2D" uid="uid://yxq3qjsxv2d1" path="res://assets/player/player_idle_sheet.png" id="idle_sheet"]
+[ext_resource type="Script" uid="uid://c7inyedcsljyr" path="res://scripts/player/Player.gd" id="player_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_4kuee"]
+
+[node name="Player" type="CharacterBody2D" unique_id=413925124]
+script = ExtResource("player_script")
+
+[node name="ShadowSprite" type="Sprite2D" parent="." unique_id=1128954846]
+z_index = -1
+position = Vector2(0, -40)
+texture = ExtResource("idle_sheet")
+hframes = 5
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=914171015]
+position = Vector2(0, -40)
+texture = ExtResource("idle_sheet")
+hframes = 5
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=771446349]
+position = Vector2(0, -4)
+shape = SubResource("CircleShape2D_4kuee")
+
+[node name="CharacterColorManager" type="Node" parent="." unique_id=1311179434]
+script = ExtResource("color_mgr_script")

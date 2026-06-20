@@ -1,21 +1,20 @@
 [gd_scene format=3 uid="uid://cl511ufu8c3q5"]
 
+[ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://cfw2flf0hbstq" path="res://assets/item/cat_tree/cat_tree_3.png" id="tex"]
-[ext_resource type="Script" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 
-[sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(39.2, 24.5)
+[sub_resource type="CircleShape2D" id="CircleShape2D_680u3"]
+radius = 6.0827627
 
 [node name="CatTree" type="StaticBody2D" unique_id=99512441]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1710900412]
-scale = Vector2(0.217, 0.217)
+scale = Vector2(0.106, 0.106)
 texture = ExtResource("tex")
 offset = Vector2(0, -105.47)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=356749862]
-position = Vector2(1, 0)
-shape = SubResource("shape")
+shape = SubResource("CircleShape2D_680u3")
 
-[node name="ShadowCaster" type="Node" parent="."]
+[node name="ShadowCaster" type="Node" parent="." unique_id=804785921]
 script = ExtResource("shadow_caster")

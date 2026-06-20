@@ -47,6 +47,7 @@ var _drag_preferred_surf  : String = ""
 var _drag_current_surface : String = ""   # surface đang hover trong khi drag (real-time)
 
 var _camera        : Camera2D = null
+var _collision_overlay : Node2D = null
 var _cam_origin    : Vector2  = Vector2.ZERO
 const ZOOM_MIN     := 1.0
 const ZOOM_MAX     := 2.5
@@ -66,6 +67,7 @@ var _vp_size : Vector2 = Vector2.ZERO
 
 var _pet_nodes       : Array[Node2D]  = []
 var _pet_labels      : Array[Label]   = []
+var _player          : Node2D         = null
 var _hunger_sliders  : Array[HSlider] = []
 var _thirst_sliders  : Array[HSlider] = []
 var _energy_sliders  : Array[HSlider] = []
@@ -208,6 +210,16 @@ func _build(data: Dictionary) -> void:
 	for pet in pet_nodes:
 		var others: Array = pet_nodes.filter(func(o): return o != pet)
 		pet.set("_other_pets", others)
+
+	# ── Player ──
+	var player_data : Dictionary = data.get("player", {})
+	if not player_data.is_empty():
+		if _player:
+			_player.queue_free()
+		_player = (load(player_data.get("scene", "res://scenes/player/Player.tscn")) as PackedScene).instantiate()
+		_player.name = "Player"
+		_player.position = _v2(player_data.get("position", [0.0, 0.0]))
+		_room._world.add_child(_player)
 
 func _process(delta: float) -> void:
 	if _night_shader:
@@ -903,6 +915,57 @@ func _build_debug_ui() -> void:
 				if spr: spr.position.y = v
 				var shadow := pet.get_node_or_null("ShadowSprite")
 				if shadow: shadow.position.y = v)
+
+	# Player frame preview
+	vbox.add_child(HSeparator.new())
+
+	var _make_player_slider = func(label: String, max_f: int, tex_path: String, hf: int) -> void:
+		var lbl := Label.new()
+		lbl.text = label + ": 0"
+		lbl.add_theme_font_size_override("font_size", 11)
+		vbox.add_child(lbl)
+		var sl := HSlider.new()
+		sl.min_value = 0; sl.max_value = max_f; sl.step = 1; sl.value = 0
+		sl.custom_minimum_size = Vector2(90, 20)
+		sl.value_changed.connect(func(v: float):
+			lbl.text = label + ": %d" % int(v)
+			if not is_instance_valid(_player): return
+			var spr := _player.get_node_or_null("Sprite")
+			var shd := _player.get_node_or_null("ShadowSprite")
+			if spr == null: return
+			_player.set_process(false)
+			_player.set_physics_process(false)
+			var tex := load(tex_path)
+			spr.texture = tex; shd.texture = tex
+			spr.hframes = hf;  shd.hframes = hf
+			spr.frame = int(v); shd.frame = int(v))
+		sl.drag_ended.connect(func(_c: bool):
+			if is_instance_valid(_player):
+				_player.set_process(true)
+				_player.set_physics_process(true))
+		vbox.add_child(sl)
+
+	_make_player_slider.call("Idle Frame",  4, "res://assets/player/player_idle_sheet.png",      5)
+	_make_player_slider.call("Walk Frame",  5, "res://assets/player/player_walk_side_sheet.png", 6)
+
+	toggle.pressed.connect(func():
+		if not is_instance_valid(_player): return
+		_player.set_process(not panel.visible)
+		_player.set_physics_process(not panel.visible))
+
+	var collision_btn := CheckButton.new()
+	collision_btn.text = "Show Collisions"
+	collision_btn.toggled.connect(func(on: bool):
+		if on:
+			if not is_instance_valid(_collision_overlay):
+				_collision_overlay = load("res://scripts/debug/CollisionDebugOverlay.gd").new()
+				if is_instance_valid(_room) and is_instance_valid(_room._world):
+					_room._world.add_child(_collision_overlay)
+		else:
+			if is_instance_valid(_collision_overlay):
+				_collision_overlay.queue_free()
+				_collision_overlay = null)
+	vbox.add_child(collision_btn)
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"

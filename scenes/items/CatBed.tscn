@@ -3,22 +3,21 @@
 [ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://p63pa8ri1l0l" path="res://assets/item/bed_small/bed_small_1.png" id="tex"]
 
-[sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(75.8, 57)
+[sub_resource type="CircleShape2D" id="CircleShape2D_xaxy8"]
+radius = 13.038404
 
 [node name="CatBed" type="StaticBody2D" unique_id=593975425]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1184990324]
-scale = Vector2(0.231, 0.231)
+position = Vector2(0, 2.9999998)
+scale = Vector2(0.162, 0.162)
 texture = ExtResource("tex")
 offset = Vector2(0, -1.43)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=119647177]
-position = Vector2(-0.099999994, 0)
-shape = SubResource("shape")
+shape = SubResource("CircleShape2D_xaxy8")
 
 [node name="SleepSpot" type="Marker2D" parent="." unique_id=1285591880]
-position = Vector2(1, 14)
 
 [node name="ShadowCaster" type="Node" parent="." unique_id=2146460901]
 script = ExtResource("shadow_caster")

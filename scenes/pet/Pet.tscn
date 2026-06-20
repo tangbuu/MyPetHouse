@@ -3,17 +3,17 @@
 [ext_resource type="Script" uid="uid://brvi47djufou6" path="res://scripts/pet/Pet.gd" id="script"]
 
 [sub_resource type="CircleShape2D" id="shape"]
-radius = 11.18034
+radius = 8.062258
 
 [node name="Pet" type="CharacterBody2D" unique_id=1600915098]
 script = ExtResource("script")
 
 [node name="ShadowSprite" type="AnimatedSprite2D" parent="." unique_id=243286079]
-position = Vector2(0, -20)
+position = Vector2(0, -1)
 scale = Vector2(0.28, 0.28)
 
 [node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1621251772]
-position = Vector2(0, -20)
+position = Vector2(0, -1)
 scale = Vector2(0.28, 0.28)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1205213920]

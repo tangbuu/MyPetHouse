@@ -1,21 +1,20 @@
 [gd_scene format=3 uid="uid://dweg8jxd3mdua"]
 
+[ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://daxxi0l4ecou1" path="res://assets/item/fountain/fountain_1.png" id="tex"]
-[ext_resource type="Script" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 
-[sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(32, 25.8)
+[sub_resource type="CircleShape2D" id="CircleShape2D_i8y1m"]
+radius = 6.0
 
 [node name="Fountain" type="StaticBody2D" unique_id=873888153]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1160318830]
-scale = Vector2(0.203, 0.203)
+scale = Vector2(0.099, 0.099)
 texture = ExtResource("tex")
 offset = Vector2(0, -49.35)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1384513230]
-position = Vector2(0, 0)
-shape = SubResource("shape")
+shape = SubResource("CircleShape2D_i8y1m")
 
-[node name="ShadowCaster" type="Node" parent="."]
+[node name="ShadowCaster" type="Node" parent="." unique_id=913736323]
 script = ExtResource("shadow_caster")

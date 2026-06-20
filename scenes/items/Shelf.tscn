@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://0bssg7f7u86e"]
 
+[ext_resource type="Script" uid="uid://bky246y74n3dw" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 [ext_resource type="Texture2D" uid="uid://bjm0y7la8ojtw" path="res://assets/item/shelf/shelf_1.png" id="tex"]
-[ext_resource type="Script" path="res://scripts/items/ShadowCaster.gd" id="shadow_caster"]
 
-[sub_resource type="RectangleShape2D" id="shape"]
-size = Vector2(62.125, 26.6)
+[sub_resource type="ConcavePolygonShape2D" id="ConcavePolygonShape2D_emxx2"]
+segments = PackedVector2Array(30.0625, -6, -4.9375, 14, -29.9375, 2, 3.0625, -18, -29.9375, 3, -4.9375, 14, 31.0625, -6, 3.0625, -18)
 
 [node name="Shelf" type="StaticBody2D" unique_id=1831945578]
 
@@ -15,7 +15,7 @@ offset = Vector2(0, -125.71)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=816369325]
 position = Vector2(-0.0625, 0)
-shape = SubResource("shape")
+shape = SubResource("ConcavePolygonShape2D_emxx2")
 
-[node name="ShadowCaster" type="Node" parent="."]
+[node name="ShadowCaster" type="Node" parent="." unique_id=1100315807]
 script = ExtResource("shadow_caster")
