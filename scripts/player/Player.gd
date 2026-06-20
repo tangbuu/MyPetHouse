@@ -25,6 +25,7 @@ var _walk_down_tex : Texture2D
 var _frame_idx   : int   = 0
 var _frame_timer : float = 0.0
 var _cur_dir     : Dir   = Dir.IDLE
+var _shadow_mat  : ShaderMaterial = null
 
 func _ready() -> void:
 	sprite.scale        = Vector2(0.5, 0.5)
@@ -35,19 +36,51 @@ func _ready() -> void:
 	_walk_up_tex   = load("res://assets/player/player_walk_up_sheet.png")
 	_walk_down_tex = load("res://assets/player/walk_down.png")
 
-	var shadow_mat := ShaderMaterial.new()
-	shadow_mat.shader = load("res://shaders/pet_shadow.gdshader")
-	shadow_mat.set_shader_parameter("shadow_alpha",  0.30)
-	shadow_mat.set_shader_parameter("shadow_length", 50.0)
-	shadow_mat.set_shader_parameter("light_dir",     Vector2(-0.894, 0.447))
-	shadow_sprite.material = shadow_mat
+	_shadow_mat = ShaderMaterial.new()
+	_shadow_mat.shader = load("res://shaders/pet_shadow.gdshader")
+	_shadow_mat.set_shader_parameter("shadow_alpha",  0.30)
+	_shadow_mat.set_shader_parameter("shadow_length", 50.0)
+	_shadow_mat.set_shader_parameter("light_dir",     Vector2(-0.894, 0.447))
+	shadow_sprite.material = _shadow_mat
 
 	motion_mode = MOTION_MODE_FLOATING
 	z_index = 0
 	color_manager.target_sprite = sprite
 	color_manager.apply()
 
+func _update_shadow() -> void:
+	var blended_dir  := Vector2.ZERO
+	var blended_len  := 0.0
+	var total_weight := 0.0
+	var radius       := 600.0
+
+	for lamp in WallLamp.all_lamps:
+		var l := lamp as WallLamp
+		if not l.is_on: continue
+		var to_entity := global_position - l.global_position
+		var dist      := to_entity.length()
+		if dist > radius: continue
+
+		var weight  := 1.0 - dist / radius
+		var dx      := to_entity.x
+		var iso     := Vector2(dx, abs(dx) * 0.5)
+		var iso_dir := iso.normalized() if iso.length_squared() > 1.0 else Vector2(0.0, 1.0)
+		blended_dir  += iso_dir * weight
+		blended_len  += clampf(dist * 0.25, 40.0, 100.0) * weight
+		total_weight += weight
+
+	if total_weight > 0.01:
+		var final_dir := blended_dir.normalized() if blended_dir.length_squared() > 0.001 else Vector2(0.0, 1.0)
+		_shadow_mat.set_shader_parameter("light_dir",     final_dir)
+		_shadow_mat.set_shader_parameter("shadow_length", blended_len / total_weight)
+		_shadow_mat.set_shader_parameter("shadow_alpha",  0.35)
+	else:
+		_shadow_mat.set_shader_parameter("light_dir",     Vector2(-0.894, 0.447))
+		_shadow_mat.set_shader_parameter("shadow_length", 60.0)
+		_shadow_mat.set_shader_parameter("shadow_alpha",  0.18)
+
 func _physics_process(_delta: float) -> void:
+	_update_shadow()
 	var dir := Vector2(
 		Input.get_axis("ui_left", "ui_right"),
 		Input.get_axis("ui_up",   "ui_down")

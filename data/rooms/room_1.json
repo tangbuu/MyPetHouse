@@ -49,14 +49,14 @@
       "texture": "res://assets/item/window/window_1.png"
     },
     {
-      "grid_col": 5,
-      "grid_row": 5,
+      "grid_col": 6,
+      "grid_row": 4,
       "grid_surface": "wall_left",
       "id": "wall_lamp_1",
       "name": "wall_lamp_1_i18",
       "position": [
-        -81.667,
-        -99.5
+        -95.444,
+        -106.278
       ],
       "scale_x": -1.0,
       "scene": "res://scenes/items/WallLamp.tscn",
