@@ -79,6 +79,24 @@ func build(data: Dictionary) -> void:
 		spr.position = Vector2(float(off[0]), float(off[1]))
 		add_child(spr)
 
+	# ── Foreground layer (renders above pets/items for occlusion) ─────────────
+	if data.has("room_fg_texture") and data["room_fg_texture"] != "":
+		var fg      := Sprite2D.new()
+		fg.name      = "Layer_fg"
+		fg.z_index   = 100
+		fg.texture   = load(data["room_fg_texture"])
+		var fts     := float(data.get("room_fg_texture_scale", data.get("room_texture_scale", 1.0)))
+		fg.scale     = Vector2(fts, fts)
+		var foff    : Array = data.get("room_fg_texture_offset", data.get("room_texture_offset", [0.0, 0.0]))
+		fg.position  = Vector2(float(foff[0]), float(foff[1]))
+		# Apply mask shader if mask texture is provided
+		if data.has("room_fg_mask") and data["room_fg_mask"] != "":
+			var mat := ShaderMaterial.new()
+			mat.shader = load("res://shaders/fg_mask.gdshader")
+			mat.set_shader_parameter("mask_texture", load(data["room_fg_mask"]))
+			fg.material = mat
+		add_child(fg)
+
 	# ── Grid system ───────────────────────────────────────────────────────────
 	grid_system = RoomGridSystem.new()
 	grid_system.name = "GridSystem"
@@ -177,7 +195,7 @@ func build(data: Dictionary) -> void:
 	var grid := Node2D.new()
 	grid.name    = "GridOverlay"
 	grid.z_index = 0
-	grid.visible = false
+	grid.visible = false  # set DEBUG_GRID = true in Main.gd to enable
 	grid.set_script(load("res://scripts/RoomGrid.gd"))
 	add_child(grid)
 	grid.call("setup", data)

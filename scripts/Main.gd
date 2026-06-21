@@ -9,8 +9,10 @@ var _room_data : Dictionary  = {}
 var _room      : Room        = null
 var _room_brightness : float = 1.0
 var _bg_sprite     : Sprite2D    = null
-var _night_overlay : ColorRect      = null
-var _night_shader  : ShaderMaterial = null
+var _night_overlay     : ColorRect      = null
+var _night_shader      : ShaderMaterial = null
+var _sunset_overlay     : ColorRect      = null
+var _sunset_max_alpha   : float          = 0.10
 var _rain_overlay  : ColorRect      = null
 var _rain_shader   : ShaderMaterial = null
 var _rain_player   : AudioStreamPlayer = null
@@ -24,6 +26,12 @@ var _iso_shear          : float = 0.15
 var _edge_feather       : float = 1.0
 # Fixed evening ambient — no day/night cycle
 var _evening_alpha : float = 0.5
+
+var _dbg_prefs    : Dictionary = {}
+const _DBG_PREFS_PATH := "user://debug_prefs.json"
+var _dbg_panel    : Control  = null
+var _dbg_dragging : bool     = false
+var _dbg_drag_off : Vector2  = Vector2.ZERO
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -57,9 +65,10 @@ var _drag_current_surface : String = ""   # surface đang hover trong khi drag (
 var _camera        : Camera2D = null
 var _collision_overlay : Node2D = null
 var _cam_origin    : Vector2  = Vector2.ZERO
-const ZOOM_MIN     := 1.0
+const DEBUG_GRID   := false   # set true to show grid + zone sliders
+const ZOOM_MIN     := 0.8
 const ZOOM_MAX     := 2.5
-const ZOOM_INIT    := 1.4
+const ZOOM_INIT    := 1.0
 var _active_touches  : int        = 0
 var _touch_positions : Dictionary = {}
 var _pinch_distance  : float      = 0.0
@@ -94,13 +103,26 @@ func _ready() -> void:
 	_drag_canvas.layer = 20
 	add_child(_drag_canvas)
 	_setup_night_overlay()
+	_setup_sunset_overlay()
 	_setup_rain()
 	_setup_music()
 	call_deferred("_build_debug_ui")
 
+func _setup_sunset_overlay() -> void:
+	# Simple warm color overlay — cam nhạt phủ nhẹ lên toàn scene trong golden hour
+	var layer := CanvasLayer.new()
+	layer.layer = 2   # under night overlay so lamps still visible on top
+	add_child(layer)
+	_sunset_overlay = ColorRect.new()
+	_sunset_overlay.color = Color(1.0, 0.55, 0.15, 0.0)
+	_sunset_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sunset_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sunset_overlay.size = _vp_size
+	layer.add_child(_sunset_overlay)
+
 func _setup_night_overlay() -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = 2   # above rain (layer 1) and world
+	layer.layer = 3   # above blue hour (layer 2) and rain (layer 1)
 	add_child(layer)
 	_night_overlay = ColorRect.new()
 	_night_overlay.color = Color(1, 1, 1, 1)  # driven entirely by shader
@@ -165,8 +187,11 @@ func _setup_camera() -> void:
 
 func _clamp_camera() -> void:
 	var z  := _camera.zoom.x
-	var lx := _vp_size.x / 2.0 * (1.0 - 1.0 / z) + 100.0
-	var ly := _vp_size.y / 2.0 * (1.0 - 1.0 / z)
+	# Image half-size in world units (852×1846 at scale 0.8, room_scale ~1)
+	var ihx := 852.0 * 0.8 / 2.0   # 340.8
+	var ihy := 1846.0 * 0.8 / 2.0  # 738.4
+	var lx  := maxf(0.0, ihx - _vp_size.x  / (2.0 * z))
+	var ly  := maxf(0.0, ihy - _vp_size.y / (2.0 * z))
 	_camera.position = Vector2(
 		clamp(_camera.position.x, _cam_origin.x - lx, _cam_origin.x + lx),
 		clamp(_camera.position.y, _cam_origin.y - ly, _cam_origin.y + ly)
@@ -190,6 +215,8 @@ func _load_room(res_path: String) -> void:
 			if num > _item_place_counter:
 				_item_place_counter = num
 	_build(_room_data)
+	if _room and _room._grid_overlay:
+		_room._grid_overlay.visible = DEBUG_GRID
 
 func _build(data: Dictionary) -> void:
 	# ── Background ──
@@ -269,14 +296,16 @@ func _process(delta: float) -> void:
 		var ctf := get_viewport().get_canvas_transform()
 		var t := DataManager.game_time_hours
 		var alpha: float
-		if t < 11.0:
-			alpha = 0.0
-		elif t < 13.0:
-			alpha = lerpf(0.0, _evening_alpha, (t - 11.0) / 2.0)
-		elif t < 21.0:
-			alpha = _evening_alpha
+		if t < 5.0:
+			alpha = _evening_alpha                                      # still night
+		elif t < 7.0:
+			alpha = lerpf(_evening_alpha, 0.0, (t - 5.0) / 2.0)       # dawn fade out
+		elif t < 18.5:
+			alpha = 0.0                                                  # full day
+		elif t < 20.0:
+			alpha = lerpf(0.0, _evening_alpha, (t - 18.5) / 1.5)      # dusk fade in
 		else:
-			alpha = lerpf(_evening_alpha, 0.0, (t - 21.0) / 3.0)
+			alpha = _evening_alpha                                      # full night
 		_night_shader.set_shader_parameter("overlay_color", Color(0.03, 0.04, 0.16, alpha))
 		# Scale light radius with canvas zoom so the glow stays the same world-space size
 		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
@@ -298,6 +327,20 @@ func _process(delta: float) -> void:
 					lamp_uv = (ctf * (lamp.global_position + Vector2(_light_x_offset * wall_dir, _light_y_offset))) / _vp_size
 			_night_shader.set_shader_parameter(_LAMP_PARAMS[i],     lamp_uv)
 			_night_shader.set_shader_parameter(_LAMP_DIR_PARAMS[i], wall_dir)
+
+	if _sunset_overlay:
+		var _t := DataManager.game_time_hours
+		# Fade in 15h → peak 17h (alpha max) → fade out 19h
+		var s_alpha := 0.0
+		if _t >= 15.0 and _t < 17.0:
+			s_alpha = lerpf(0.0, _sunset_max_alpha, (_t - 15.0) / 2.0)
+		elif _t >= 17.0 and _t < 19.0:
+			s_alpha = lerpf(_sunset_max_alpha, 0.0, (_t - 17.0) / 2.0)
+		# Color shifts: pale amber (early) → deep orange (peak) → dim orange (late)
+		var warm_r := lerpf(1.0,  1.0,  s_alpha / _sunset_max_alpha) if _sunset_max_alpha > 0 else 1.0
+		var warm_g := lerpf(0.72, 0.45, clampf((_t - 15.0) / 4.0, 0.0, 1.0))
+		var warm_b := lerpf(0.28, 0.10, clampf((_t - 15.0) / 4.0, 0.0, 1.0))
+		_sunset_overlay.color = Color(warm_r, warm_g, warm_b, s_alpha)
 
 	_hud.set_bag_drop_highlight(_dragging_item != null and _hud.is_bag_panel_hovered(_drag_screen_pos))
 
@@ -475,6 +518,12 @@ func _lower_from_canvas() -> void:
 	_drag_in_canvas = false
 
 func _input(event: InputEvent) -> void:
+	# Debug panel drag (highest priority)
+	if _dbg_dragging and event is InputEventMouseMotion:
+		_dbg_panel.position = get_viewport().get_mouse_position() + _dbg_drag_off
+		get_viewport().set_input_as_handled()
+		return
+
 	# Capture bag state here — _input fires before gui_input (backdrop close) and _unhandled_input.
 	if not _dragging_item:
 		if (event is InputEventScreenTouch and event.pressed and _active_touches == 0) \
@@ -894,60 +943,111 @@ func _on_viewport_size_changed() -> void:
 
 # ── Debug UI ──────────────────────────────────────────────────────────────────
 
+func _load_debug_prefs() -> void:
+	if not FileAccess.file_exists(_DBG_PREFS_PATH): return
+	var f := FileAccess.open(_DBG_PREFS_PATH, FileAccess.READ)
+	if not f: return
+	var d = JSON.parse_string(f.get_as_text())
+	f.close()
+	if d is Dictionary: _dbg_prefs = d
+
+func _save_debug_prefs() -> void:
+	var f := FileAccess.open(_DBG_PREFS_PATH, FileAccess.WRITE)
+	if not f: return
+	f.store_string(JSON.stringify(_dbg_prefs, "\t"))
+	f.close()
+
 func _build_debug_ui() -> void:
+	# Load saved prefs and apply to runtime state
+	_load_debug_prefs()
+	_evening_alpha = _dbg_prefs.get("night_max", 0.5)
+	_sunset_max_alpha = _dbg_prefs.get("sunset_alpha", 0.10)
+	if _rain_shader:
+		var ro : float = _dbg_prefs.get("rain_opacity", 0.13)
+		_rain_shader.set_shader_parameter("rain_opacity", ro)
+		if _rain_player: _rain_player.volume_db = _opacity_to_db(ro)
+
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)
 
-	# Small arrow toggle button in top-right corner
-	var toggle := Button.new()
-	toggle.text = "▶"
-	toggle.flat = true
-	toggle.custom_minimum_size = Vector2(24, 24)
-	toggle.add_theme_font_size_override("font_size", 14)
-	toggle.anchor_left   = 1.0
-	toggle.anchor_right  = 1.0
-	toggle.anchor_top    = 0.0
-	toggle.anchor_bottom = 0.0
-	toggle.offset_left   = -32.0
-	toggle.offset_top    = 8.0
-	toggle.offset_right  = -8.0
-	toggle.offset_bottom = 32.0
-	layer.add_child(toggle)
-
-	# Panel starts hidden
+	# Draggable panel — positioned freely (no anchors)
 	var panel := PanelContainer.new()
-	panel.anchor_left   = 1.0
-	panel.anchor_right  = 1.0
-	panel.anchor_top    = 0.0
-	panel.anchor_bottom = 0.0
-	panel.offset_right  = -8.0
-	panel.offset_top    = 40.0
-	panel.grow_horizontal = 0
-	panel.visible = false
+	panel.position = Vector2(
+		_dbg_prefs.get("panel_x", _vp_size.x - 210.0),
+		_dbg_prefs.get("panel_y", 40.0))
 	layer.add_child(panel)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	panel.add_child(vbox)
+	var root_vbox := VBoxContainer.new()
+	root_vbox.add_theme_constant_override("separation", 2)
+	panel.add_child(root_vbox)
 
-	toggle.pressed.connect(func():
-		panel.visible = not panel.visible
-		toggle.text = "◀" if panel.visible else "▶")
+	# ── Title / drag bar ──
+	var title_row := HBoxContainer.new()
+	root_vbox.add_child(title_row)
 
+	var drag_lbl := Label.new()
+	drag_lbl.text = "≡  Debug"
+	drag_lbl.add_theme_font_size_override("font_size", 12)
+	drag_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	drag_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+	drag_lbl.mouse_default_cursor_shape = Control.CURSOR_MOVE
+	title_row.add_child(drag_lbl)
+
+	var collapse_btn := Button.new()
+	collapse_btn.text = "▼"
+	collapse_btn.flat = true
+	collapse_btn.custom_minimum_size = Vector2(22, 20)
+	collapse_btn.add_theme_font_size_override("font_size", 11)
+	title_row.add_child(collapse_btn)
+
+	# Collapsible content area
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 4)
+	root_vbox.add_child(content)
+
+	# Drag logic — motion handled in _input() for reliable viewport coords
+	_dbg_panel = panel
+	drag_lbl.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT:
+			_dbg_dragging = ev.pressed
+			if ev.pressed:
+				_dbg_drag_off = _dbg_panel.position - get_viewport().get_mouse_position()
+			else:
+				_dbg_prefs["panel_x"] = _dbg_panel.position.x
+				_dbg_prefs["panel_y"] = _dbg_panel.position.y
+				_save_debug_prefs())
+
+	collapse_btn.pressed.connect(func():
+		content.visible = not content.visible
+		collapse_btn.text = "▶" if not content.visible else "▼"
+		if is_instance_valid(_player):
+			_player.set_process(content.visible)
+			_player.set_physics_process(content.visible))
+
+	# Helper: slider that auto-saves value to prefs
+	var dbg_slider := func(label: String, min_v: float, max_v: float, step_v: float,
+			key: String, default_v: float, fmt: String, setter: Callable) -> void:
+		_add_shader_slider(content, label, min_v, max_v, step_v,
+			float(_dbg_prefs.get(key, default_v)), fmt,
+			func(v: float):
+				setter.call(v)
+				_dbg_prefs[key] = v
+				_save_debug_prefs())
+
+	# ── Content ──
 	var max_btn := Button.new()
 	max_btn.text = "Max $"
 	max_btn.pressed.connect(func():
 		DataManager.add_coins(999999)
 		DataManager.add_gems(9999))
-	vbox.add_child(max_btn)
+	content.add_child(max_btn)
 
-	# Atmosphere
-	vbox.add_child(HSeparator.new())
+	content.add_child(HSeparator.new())
 	var time_lbl := Label.new()
 	time_lbl.text = "Time: " + DataManager.game_time_string()
 	time_lbl.add_theme_font_size_override("font_size", 11)
-	vbox.add_child(time_lbl)
+	content.add_child(time_lbl)
 	var time_slider := HSlider.new()
 	time_slider.min_value = 0.0
 	time_slider.max_value = 24.0
@@ -957,22 +1057,52 @@ func _build_debug_ui() -> void:
 	time_slider.value_changed.connect(func(v: float):
 		DataManager.game_time_hours = v
 		time_lbl.text = "Time: " + DataManager.game_time_string())
-	vbox.add_child(time_slider)
-	_add_shader_slider(vbox, "Night Max", 0.0, 1.0, 0.01, 0.5, "%.2f",
+	content.add_child(time_slider)
+
+	dbg_slider.call("Night Max", 0.0, 1.0, 0.01, "night_max", 0.5, "%.2f",
 		func(v: float): _evening_alpha = v)
-	_add_shader_slider(vbox, "Rain",    0.0, 0.5, 0.01, 0.13, "%.2f",
+	dbg_slider.call("Rain", 0.0, 0.5, 0.01, "rain_opacity", 0.13, "%.2f",
 		func(v: float):
 			if _rain_shader: _rain_shader.set_shader_parameter("rain_opacity", v)
 			if _rain_player: _rain_player.volume_db = _opacity_to_db(v))
+	content.add_child(HSeparator.new())
+	dbg_slider.call("Sunset", 0.0, 0.3, 0.005, "sunset_alpha", 0.10, "%.3f",
+		func(v: float): _sunset_max_alpha = v)
+
+	# Zone vertex tuning — controlled by DEBUG_GRID flag
+	if DEBUG_GRID:
+		content.add_child(HSeparator.new())
+		var _fz : Array = _room_data.get("zones", {}).get("floor", [[-2,84],[-287,241],[11,408],[292,242]])
+		var _wz : Array = _room_data.get("zones", {}).get("wall",  [[-1,-164],[294,-20],[292,242],[-2,84],[-287,241],[-288,-14]])
+		var _set_zone := func():
+			_wz[2] = [_fz[3][0], _fz[3][1]]
+			_wz[3] = [_fz[0][0], _fz[0][1]]
+			_wz[4] = [_fz[1][0], _fz[1][1]]
+			_room_data["zones"] = {"floor": _fz, "wall": _wz}
+			_rebuild_grid()
+			_save_room_data()
+		_add_shader_slider(content, "F TopX",   -600.0, 600.0, 1.0, _fz[0][0], "%d", func(v:float): _fz[0][0]=v; _set_zone.call())
+		_add_shader_slider(content, "F TopY",   -300.0, 800.0, 1.0, _fz[0][1], "%d", func(v:float): _fz[0][1]=v; _set_zone.call())
+		_add_shader_slider(content, "F LeftX",  -600.0, 0.0,   1.0, _fz[1][0], "%d", func(v:float): _fz[1][0]=v; _set_zone.call())
+		_add_shader_slider(content, "F LeftY",   0.0,   800.0, 1.0, _fz[1][1], "%d", func(v:float): _fz[1][1]=v; _set_zone.call())
+		_add_shader_slider(content, "F FrontX", -600.0, 600.0, 1.0, _fz[2][0], "%d", func(v:float): _fz[2][0]=v; _set_zone.call())
+		_add_shader_slider(content, "F FrontY",  0.0,   900.0, 1.0, _fz[2][1], "%d", func(v:float): _fz[2][1]=v; _set_zone.call())
+		_add_shader_slider(content, "F RightX",  0.0,   600.0, 1.0, _fz[3][0], "%d", func(v:float): _fz[3][0]=v; _set_zone.call())
+		_add_shader_slider(content, "F RightY",  0.0,   800.0, 1.0, _fz[3][1], "%d", func(v:float): _fz[3][1]=v; _set_zone.call())
+		_add_shader_slider(content, "W TopX",   -600.0, 600.0, 1.0, _wz[0][0], "%d", func(v:float): _wz[0][0]=v; _set_zone.call())
+		_add_shader_slider(content, "W TopY",   -600.0, 200.0, 1.0, _wz[0][1], "%d", func(v:float): _wz[0][1]=v; _set_zone.call())
+		_add_shader_slider(content, "W RTopX",   0.0,   600.0, 1.0, _wz[1][0], "%d", func(v:float): _wz[1][0]=v; _set_zone.call())
+		_add_shader_slider(content, "W RTopY",  -400.0, 200.0, 1.0, _wz[1][1], "%d", func(v:float): _wz[1][1]=v; _set_zone.call())
+		_add_shader_slider(content, "W LTopX", -600.0,  0.0,   1.0, _wz[5][0], "%d", func(v:float): _wz[5][0]=v; _set_zone.call())
+		_add_shader_slider(content, "W LTopY", -400.0,  200.0, 1.0, _wz[5][1], "%d", func(v:float): _wz[5][1]=v; _set_zone.call())
 
 	# Player frame preview
-	vbox.add_child(HSeparator.new())
-
+	content.add_child(HSeparator.new())
 	var _make_player_slider = func(label: String, max_f: int, tex_path: String, hf: int) -> void:
 		var lbl := Label.new()
 		lbl.text = label + ": 0"
 		lbl.add_theme_font_size_override("font_size", 11)
-		vbox.add_child(lbl)
+		content.add_child(lbl)
 		var sl := HSlider.new()
 		sl.min_value = 0; sl.max_value = max_f; sl.step = 1; sl.value = 0
 		sl.custom_minimum_size = Vector2(90, 20)
@@ -992,14 +1122,8 @@ func _build_debug_ui() -> void:
 			if is_instance_valid(_player):
 				_player.set_process(true)
 				_player.set_physics_process(true))
-		vbox.add_child(sl)
-
+		content.add_child(sl)
 	_make_player_slider.call("Walk Frame", 5, "res://assets/player/player_walk_side_sheet.png", 6)
-
-	toggle.pressed.connect(func():
-		if not is_instance_valid(_player): return
-		_player.set_process(not panel.visible)
-		_player.set_physics_process(not panel.visible))
 
 	var collision_btn := CheckButton.new()
 	collision_btn.text = "Show Collisions"
@@ -1013,7 +1137,7 @@ func _build_debug_ui() -> void:
 			if is_instance_valid(_collision_overlay):
 				_collision_overlay.queue_free()
 				_collision_overlay = null)
-	vbox.add_child(collision_btn)
+	content.add_child(collision_btn)
 
 	var reset_bag_btn := Button.new()
 	reset_bag_btn.text = "Reset Bag"
@@ -1023,9 +1147,9 @@ func _build_debug_ui() -> void:
 		_room_data["items"] = perms
 		_save_room_data()
 		get_tree().reload_current_scene())
-	vbox.add_child(reset_bag_btn)
+	content.add_child(reset_bag_btn)
 
-	call_deferred("_build_stats_ui", vbox)
+	call_deferred("_build_stats_ui", content)
 
 func _add_shader_slider(vbox: VBoxContainer, label: String,
 		min_v: float, max_v: float, step_v: float, init_v: float,
