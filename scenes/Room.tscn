@@ -9,13 +9,13 @@ size = Vector2(315.23645, 10)
 size = Vector2(322.87973, 10)
 
 [sub_resource type="RectangleShape2D" id="shape_w3"]
-size = Vector2(313.39224, 10)
+size = Vector2(311.74768, 9.51593)
 
 [sub_resource type="RectangleShape2D" id="shape_w4"]
 size = Vector2(312.71112, 10)
 
 [node name="Room" type="Node2D" unique_id=1781405327]
-position = Vector2(266, 518)
+position = Vector2(270, 585)
 scale = Vector2(1.01, 1.01)
 script = ExtResource("script")
 
@@ -23,13 +23,14 @@ script = ExtResource("script")
 position = Vector2(0, 75)
 
 [node name="Walls" type="Node2D" parent="." unique_id=1585990966]
+position = Vector2(12.871287, -67.32674)
 
 [node name="Wall1" type="StaticBody2D" parent="Walls" unique_id=2092120455]
 position = Vector2(-123, 9)
 rotation = 2.634
 
 [node name="Col" type="CollisionShape2D" parent="Walls/Wall1" unique_id=1708606821]
-position = Vector2(11.587173, -0.00030517578)
+position = Vector2(7.647337, -8.106898)
 shape = SubResource("shape_w1")
 
 [node name="Wall2" type="StaticBody2D" parent="Walls" unique_id=1275879300]
@@ -47,9 +48,9 @@ position = Vector2(124, 142)
 rotation = -0.478
 
 [node name="Col" type="CollisionShape2D" parent="Walls/Wall3" unique_id=739012875]
-position = Vector2(-0.60269165, 35.881836)
-rotation = -0.057595804
-scale = Vector2(0.9999999, 0.9999999)
+position = Vector2(-10.262019, 34.35816)
+rotation = -0.11519173
+scale = Vector2(0.9999998, 0.9999998)
 shape = SubResource("shape_w3")
 
 [node name="Wall4" type="StaticBody2D" parent="Walls" unique_id=1972291319]
@@ -57,5 +58,5 @@ position = Vector2(124, 9)
 rotation = -2.632
 
 [node name="Col" type="CollisionShape2D" parent="Walls/Wall4" unique_id=2071466545]
-position = Vector2(-14.855469, 0)
+position = Vector2(-5.5450077, -10.409716)
 shape = SubResource("shape_w4")
