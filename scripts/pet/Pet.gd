@@ -55,12 +55,9 @@ var _pre_action_pos    : Vector2 = Vector2.ZERO  # vị trí trước khi telepo
 var _action_item_pos   : Vector2 = Vector2.ZERO  # vị trí item, dùng cho return teleport
 var _action_face_pos   : Vector2 = Vector2.INF   # item center để xác định hướng mặt sau teleport
 
-var hunger : float = 1.0
-var thirst : float = 1.0
-var energy : float = 1.0
-
 var _laziness    : float
 var _curiosity   : float
+var _sleep_timer : float = 0.0
 var _shadow_mat : ShaderMaterial = null
 
 var _other_pets   : Array   = []
@@ -184,7 +181,9 @@ func _change_anim_state(new_state: AnimState) -> void:
 		AnimState.DRINK_LOOP:    _play("drink_loop")
 		AnimState.DRINK_END:     _play("drink_end")
 		AnimState.SLEEP_PREPARE: _play("sleep_prepare")
-		AnimState.SLEEPING:      _play("sleeping")
+		AnimState.SLEEPING:
+			_play("sleeping")
+			_sleep_timer = randf_range(_cfg.sleep_duration_min, _cfg.sleep_duration_max)
 		AnimState.SLEEP_DONE:    _play("sleep_done")
 		# WALK không xử lý ở đây — _set_move_anim chọn walk_side/down/up trực tiếp
 
@@ -253,9 +252,12 @@ func _update_shadow() -> void:
 func _physics_process(delta: float) -> void:
 	if standalone_anim != "": return
 	_update_shadow()
-	_tick_stats(delta)
 	_cat_bump_cooldown = maxf(_cat_bump_cooldown - delta, 0.0)
 	_behavior_cooldown = maxf(_behavior_cooldown - delta, 0.0)
+	if _anim_state == AnimState.SLEEPING:
+		_sleep_timer -= delta
+		if _sleep_timer <= 0.0:
+			_change_anim_state(AnimState.SLEEP_DONE)
 	if _is_frozen():
 		velocity = Vector2.ZERO
 		return
@@ -296,35 +298,10 @@ func _physics_process(delta: float) -> void:
 	if _anim_state in [AnimState.IDLE, AnimState.IDLE_RANDOM]: return
 	_change_anim_state(AnimState.IDLE)
 
-# ── Stats ─────────────────────────────────────────────────────────────────────
-
-func _tick_stats(delta: float) -> void:
-	if _anim_state == AnimState.SLEEPING:
-		energy = minf(energy + _cfg.energy_sleep_gain * delta, 1.0)
-		if energy >= _cfg.energy_full_threshold:
-			_change_anim_state(AnimState.SLEEP_DONE)
-	else:
-		energy = maxf(energy - _cfg.energy_decay * delta, 0.0)
-	hunger = maxf(hunger - _cfg.hunger_decay * delta, 0.0)
-	thirst = maxf(thirst - _cfg.thirst_decay * delta, 0.0)
-
-func food_bowl_has_food() -> bool:
-	if not food_bowl: return false
-	var v = food_bowl.get("has_food")
-	return bool(v) if v != null else true
-
-func water_bowl_has_water() -> bool:
-	if not water_bowl: return false
-	var v = water_bowl.get("has_water")
-	return bool(v) if v != null else true
-
 # ── Behavior system ───────────────────────────────────────────────────────────
 
 func _setup_behaviors() -> void:
 	_behaviors.clear()
-	_behaviors.append(EatBehavior.new())
-	_behaviors.append(DrinkBehavior.new())
-	_behaviors.append(SleepBehavior.new())
 	_behaviors.append_array(extra_behaviors)
 	_behaviors.sort_custom(func(a: PetBehavior, b: PetBehavior) -> bool: return a.priority > b.priority)
 
@@ -385,32 +362,40 @@ func _return_after_action() -> void:
 
 func _do_natural_behavior() -> void:
 	if _current_state == PetStateMachine.State.SLEEPING: return
-	if _anim_state == AnimState.SLEEPING and energy < _cfg.energy_full_threshold: return
-
 	if _evaluate_behaviors(): return
 
-	if hunger > 0.65:
-		_decide_active()
-	else:
-		_decide_calm()
-
-func _decide_active() -> void:
 	var w := {}
+	# ── Không có target ───────────────────────────────────────────────────────
 	w["idle"]   = 0.3 + _laziness  * 0.2
 	w["wander"] = 0.35 + _curiosity * 0.2
+	# ── Có target ─────────────────────────────────────────────────────────────
+	if food_bowl:  w["eat"]   = 0.15
+	if water_bowl: w["drink"] = 0.15
+	if bed_node:   w["sleep"] = 0.10
+
 	match _weighted_pick(w):
 		"idle":   _play_random_idle()
 		"wander": _start_wander(randf_range(1.0, 2.0))
+		"eat":    _do_eat()
+		"drink":  _do_drink()
+		"sleep":  _do_sleep()
 		_:        _play_random_idle()
 
-func _decide_calm() -> void:
-	var w := {}
-	w["idle"]   = 0.3 + _laziness  * 0.2
-	w["wander"] = 0.3 + _curiosity * 0.1
-	match _weighted_pick(w):
-		"idle":   _play_random_idle()
-		"wander": _start_wander(randf_range(1.0, 2.0))
-		_:        _play_random_idle()
+func _do_eat() -> void:
+	if not food_bowl: _play_random_idle(); return
+	var dest := bowl_arrive_pos(food_bowl)
+	begin_action(dest, func(): eat(), food_bowl.global_position)
+
+func _do_drink() -> void:
+	if not water_bowl: _play_random_idle(); return
+	var dest := bowl_arrive_pos(water_bowl)
+	begin_action(dest, func(): water_bowl.start_drink(self), water_bowl.global_position)
+
+func _do_sleep() -> void:
+	if not bed_node: _play_random_idle(); return
+	var sleep_spot := bed_node.get_node_or_null("SleepSpot") as Node2D
+	var dest := sleep_spot.global_position if sleep_spot else bed_node.global_position
+	begin_action(dest, func(): _change_anim_state(AnimState.SLEEP_PREPARE), bed_node.global_position)
 
 func bowl_arrive_pos(bowl: Node2D) -> Vector2:
 	var spot := bowl.get_node_or_null("ArriveSpot") as Node2D
@@ -483,7 +468,6 @@ func eat() -> void:
 	_change_anim_state(AnimState.EAT_START)
 
 func on_eat_completed() -> void:
-	hunger = minf(hunger + _cfg.hunger_eat_gain, 1.0)
 	_change_anim_state(AnimState.EAT_END)
 
 # ── Drink ─────────────────────────────────────────────────────────────────────
@@ -492,7 +476,6 @@ func drink() -> void:
 	_change_anim_state(AnimState.DRINK_START)
 
 func on_drink_completed() -> void:
-	thirst = minf(thirst + _cfg.thirst_drink_gain, 1.0)
 	_change_anim_state(AnimState.DRINK_END)
 
 # ── Idle animations ───────────────────────────────────────────────────────────

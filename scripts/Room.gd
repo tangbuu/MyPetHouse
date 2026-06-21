@@ -59,11 +59,15 @@ func build(data: Dictionary) -> void:
 			spr.z_index  = z_map[key]
 			spr.texture  = load(layers[key])
 			add_child(spr)
-	elif data.has("room_texture"):
+	elif data.has("room_texture") and data["room_texture"] != "":
 		var spr     := Sprite2D.new()
 		spr.name     = "Layer_room"
 		spr.z_index  = -2
 		spr.texture  = load(data["room_texture"])
+		var ts      := float(data.get("room_texture_scale", 1.0))
+		spr.scale    = Vector2(ts, ts)
+		var off     : Array = data.get("room_texture_offset", [0.0, 0.0])
+		spr.position = Vector2(float(off[0]), float(off[1]))
 		add_child(spr)
 
 	# ── Grid system ───────────────────────────────────────────────────────────

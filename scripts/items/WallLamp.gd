@@ -22,8 +22,7 @@ func _enter_tree() -> void:
 
 func _process(_delta: float) -> void:
 	var h := DataManager.game_time_hours
-	if h == _last_hours:
-		return
+	if h == _last_hours: return
 	_last_hours = h
 	_update(h)
 
@@ -37,7 +36,6 @@ func _update(hours: float) -> void:
 		alpha = 1.0
 	else:
 		alpha = lerpf(1.0, 0.0, (hours - 21.0) / 3.0)
-
 	is_on = alpha > 0.0
 	_sprite.region_rect = Rect2(86, 0, 86, 101) if is_on else Rect2(0, 0, 86, 101)
 

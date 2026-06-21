@@ -6,7 +6,7 @@
 size = Vector2(284, 10)
 
 [sub_resource type="RectangleShape2D" id="shape_w2"]
-size = Vector2(279, 10)
+size = Vector2(278.9942, 10)
 
 [sub_resource type="RectangleShape2D" id="shape_w3"]
 size = Vector2(278, 10)
@@ -15,39 +15,39 @@ size = Vector2(278, 10)
 size = Vector2(283, 10)
 
 [node name="Room" type="Node2D" unique_id=1781405327]
-position = Vector2(270, 680)
-scale = Vector2(1.055, 1.055)
+position = Vector2(266, 518)
+scale = Vector2(1.01, 1.01)
 script = ExtResource("script")
 
 [node name="Center" type="Marker2D" parent="." unique_id=209196427]
-position = Vector2(-0.94786745, 61.611374)
+position = Vector2(0, 75)
 
-[node name="Walls" type="Node2D" parent="."]
+[node name="Walls" type="Node2D" parent="." unique_id=1585990966]
 
-[node name="Wall1" type="StaticBody2D" parent="Walls"]
+[node name="Wall1" type="StaticBody2D" parent="Walls" unique_id=2092120455]
 position = Vector2(-123, 9)
 rotation = 2.634
 
-[node name="Col" type="CollisionShape2D" parent="Walls/Wall1"]
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall1" unique_id=1708606821]
 shape = SubResource("shape_w1")
 
-[node name="Wall2" type="StaticBody2D" parent="Walls"]
+[node name="Wall2" type="StaticBody2D" parent="Walls" unique_id=1275879300]
 position = Vector2(-123, 142)
 rotation = 0.476
 
-[node name="Col" type="CollisionShape2D" parent="Walls/Wall2"]
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall2" unique_id=567052184]
 shape = SubResource("shape_w2")
 
-[node name="Wall3" type="StaticBody2D" parent="Walls"]
+[node name="Wall3" type="StaticBody2D" parent="Walls" unique_id=857258983]
 position = Vector2(124, 142)
 rotation = -0.478
 
-[node name="Col" type="CollisionShape2D" parent="Walls/Wall3"]
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall3" unique_id=739012875]
 shape = SubResource("shape_w3")
 
-[node name="Wall4" type="StaticBody2D" parent="Walls"]
+[node name="Wall4" type="StaticBody2D" parent="Walls" unique_id=1972291319]
 position = Vector2(124, 9)
 rotation = -2.632
 
-[node name="Col" type="CollisionShape2D" parent="Walls/Wall4"]
+[node name="Col" type="CollisionShape2D" parent="Walls/Wall4" unique_id=2071466545]
 shape = SubResource("shape_w4")

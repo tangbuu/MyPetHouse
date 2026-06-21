@@ -175,7 +175,55 @@ ARRIVE_DIST_DEFAULT = 52.0 / ARRIVE_DIST = 5.0
 
 ---
 
-## 5. MỤC TIÊU VÀ KHẢ NĂNG MỞ RỘNG (Scalability)
+## 5. PLAYER SYSTEM
+
+### Player.gd (`scripts/player/Player.gd`)
+
+`CharacterBody2D` với `MOTION_MODE_FLOATING` (phù hợp isometric top-down, không bị kẹt góc như GROUNDED).
+
+**Directional animation system** — 4 trạng thái enum `Dir`:
+
+| Dir | Texture | Frames | Trigger |
+|-----|---------|--------|---------|
+| `IDLE` | `player_idle_sheet.png` | 5 (array [0-4]) | không input |
+| `SIDE` | `player_walk_side_sheet.png` | 6 | input ngang chiếm ưu thế hoặc xuống |
+| `UP` | `player_walk_up_sheet.png` | 8 (dùng WALK_UP_USE_FRAMES) | input lên chiếm ưu thế |
+| `DOWN` | `walk_down.png` | 4 | input xuống chiếm ưu thế |
+
+Logic phân hướng: `abs(dir.y) > abs(dir.x)` → UP/DOWN, ngược lại → SIDE. Flip_h tự động cho trái/phải.
+
+**Shadow** — `_update_shadow()` đọc `WallLamp.all_lamps` mỗi physics frame, blend hướng/độ dài bóng dựa theo khoảng cách tới đèn (radius 600px). Dùng cùng pattern với Pet.gd.
+
+**Collision** — `CircleShape2D` tại position `(0, -4)` (sát chân nhân vật). Không có radius được set → dùng default Godot.
+
+**Hằng số điều chỉnh:**
+```gdscript
+SPEED      = 90.0
+IDLE_TIME  = 0.14s/frame
+WALK_TIME  = 0.16s/frame
+```
+
+### Assets player (`assets/player/`)
+
+| File | Kích thước | Frames | Ghi chú |
+|------|-----------|--------|---------|
+| `player_idle_sheet.png` | 300×208 | 5 | Gemini gen, green bg removed |
+| `player_walk_side_sheet.png` | 486×194 | 6 | Microsoft Designer S1, frames 1-6 |
+| `player_walk_up_sheet.png` | 600×208 | 8 | Gemini gen, green bg removed |
+| `walk_down.png` | — | 4 | placeholder |
+
+### Debug tools
+
+**CollisionDebugOverlay** (`scripts/debug/CollisionDebugOverlay.gd`) — Node2D tự vẽ tất cả `CollisionShape2D` trong scene (Rectangle, Circle, Capsule) bằng outline xanh lá mỗi frame. Toggle qua checkbox "Show Collisions" trong debug panel.
+
+**Debug panel** (Main.gd `_build_debug_ui`) — toggle ▶/◀ ở góc trên phải:
+- Slider Idle Frame (0-4) / Walk Frame (0-5): freeze player, scrub từng frame
+- Show Collisions: bật/tắt CollisionDebugOverlay
+- Khi panel mở → player bị freeze (set_process false). Khi đóng → player hoạt động bình thường.
+
+---
+
+## 6. MỤC TIÊU VÀ KHẢ NĂNG MỞ RỘNG (Scalability)
 
 ### Điểm mạnh của kiến trúc hiện tại
 
@@ -200,4 +248,4 @@ ARRIVE_DIST_DEFAULT = 52.0 / ARRIVE_DIST = 5.0
 
 ---
 
-*Cập nhật lần cuối: 2026-06-19*
+*Cập nhật lần cuối: 2026-06-21*

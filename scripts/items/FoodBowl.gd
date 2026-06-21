@@ -1,22 +1,13 @@
 extends StaticBody2D
 
-signal food_changed(amount: float)
-
 @export var config: PetConfig = null
-
-var has_food    : bool  = true
-var food_amount : float = 1.0
 
 var _feeding_pets : Array     = []
 var _eat_timer    : float     = 0.0
 var _cfg          : PetConfig
 
-@onready var _sprite : Sprite2D = $Sprite2D
-
 func _ready() -> void:
 	_cfg = config if config else PetConfig.new()
-	input_event.connect(_on_input_event)
-	_update_visual()
 
 func _process(delta: float) -> void:
 	if _feeding_pets.is_empty(): return
@@ -25,7 +16,6 @@ func _process(delta: float) -> void:
 		_finish_feed()
 
 func start_feed(pet: Node) -> void:
-	if not has_food: return
 	if pet in _feeding_pets: return
 	_feeding_pets.append(pet)
 	if _eat_timer <= 0.0:
@@ -37,24 +27,3 @@ func _finish_feed() -> void:
 		if is_instance_valid(pet):
 			pet.on_eat_completed()
 	_feeding_pets.clear()
-	food_amount = maxf(food_amount - _cfg.food_per_session, 0.0)
-	has_food    = food_amount > 0.05
-	_update_visual()
-	emit_signal("food_changed", food_amount)
-
-func refill() -> void:
-	food_amount = 1.0
-	has_food    = true
-	_update_visual()
-	emit_signal("food_changed", food_amount)
-
-func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if has_food: return
-	if event is InputEventScreenTouch and event.pressed:
-		refill()
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		refill()
-
-func _update_visual() -> void:
-	if not _sprite: return
-	_sprite.modulate = Color(1.0, 1.0, 1.0) if has_food else Color(0.55, 0.55, 0.55)

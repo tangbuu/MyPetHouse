@@ -7,15 +7,21 @@ extends Node2D
 
 var _room_data : Dictionary  = {}
 var _room      : Room        = null
-var _bg_rect       : TextureRect = null
+var _room_brightness : float = 1.0
+var _bg_sprite     : Sprite2D    = null
 var _night_overlay : ColorRect      = null
 var _night_shader  : ShaderMaterial = null
+var _rain_overlay  : ColorRect      = null
+var _rain_shader   : ShaderMaterial = null
+var _bg_layer      : CanvasLayer    = null
 var _base_light_radius  : float = 0.23
-var _light_y_offset     : float = -49.0
+var _light_y_offset     : float = -60.0
 var _light_x_offset     : float = 1.0
 var _light_intensity    : float = 1.0
 var _iso_shear          : float = 0.15
 var _edge_feather       : float = 1.0
+# Fixed evening ambient — no day/night cycle
+var _evening_alpha : float = 0.55
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -68,16 +74,11 @@ var _vp_size : Vector2 = Vector2.ZERO
 var _pet_nodes       : Array[Node2D]  = []
 var _pet_labels      : Array[Label]   = []
 var _player          : Node2D         = null
-var _hunger_sliders  : Array[HSlider] = []
-var _thirst_sliders  : Array[HSlider] = []
-var _energy_sliders  : Array[HSlider] = []
-var _hunger_dragging : Array[bool]    = []
-var _thirst_dragging : Array[bool]    = []
-var _energy_dragging : Array[bool]    = []
 
 func _ready() -> void:
 	_vp_size = get_viewport().get_visible_rect().size
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	_bg.visible = false   # clear color handles solid bg
 	_load_room(room_data_path)
 	_setup_camera()
 	_hud.edit_mode_toggled.connect(_set_edit_mode)
@@ -91,11 +92,12 @@ func _ready() -> void:
 	_drag_canvas.layer = 20
 	add_child(_drag_canvas)
 	_setup_night_overlay()
+	_setup_rain()
 	call_deferred("_build_debug_ui")
 
 func _setup_night_overlay() -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = 0
+	layer.layer = 0   # above world space
 	add_child(layer)
 	_night_overlay = ColorRect.new()
 	_night_overlay.color = Color(1, 1, 1, 1)  # driven entirely by shader
@@ -112,6 +114,19 @@ func _setup_night_overlay() -> void:
 	_night_shader.set_shader_parameter("iso_shear",       _iso_shear)
 	_night_shader.set_shader_parameter("edge_feather",    _edge_feather)
 
+func _setup_rain() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = -1   # behind world space — shows only in gaps around room
+	add_child(layer)
+	_rain_overlay = ColorRect.new()
+	_rain_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rain_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rain_overlay.size = _vp_size
+	_rain_shader = ShaderMaterial.new()
+	_rain_shader.shader = load("res://shaders/rain.gdshader")
+	_rain_overlay.material = _rain_shader
+	layer.add_child(_rain_overlay)
+
 func _setup_camera() -> void:
 	_camera = Camera2D.new()
 	_cam_origin = _vp_size / 2.0
@@ -122,7 +137,7 @@ func _setup_camera() -> void:
 
 func _clamp_camera() -> void:
 	var z  := _camera.zoom.x
-	var lx := _vp_size.x / 2.0 * (1.0 - 1.0 / z)
+	var lx := _vp_size.x / 2.0 * (1.0 - 1.0 / z) + 100.0
 	var ly := _vp_size.y / 2.0 * (1.0 - 1.0 / z)
 	_camera.position = Vector2(
 		clamp(_camera.position.x, _cam_origin.x - lx, _cam_origin.x + lx),
@@ -152,22 +167,19 @@ func _build(data: Dictionary) -> void:
 	# ── Background ──
 	var bg_img: String = data.get("background_image", "")
 	if bg_img != "" and ResourceLoader.exists(bg_img):
-		if not _bg_rect:
-			_bg_rect              = TextureRect.new()
-			_bg_rect.z_index      = -9
-			_bg_rect.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
-			_bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			add_child(_bg_rect)
-			_bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_bg_rect.size    = _vp_size
-		_bg_rect.texture = load(bg_img)
-		_bg_rect.visible = true
-		_bg.visible      = false
+		if not _bg_sprite:
+			_bg_sprite          = Sprite2D.new()
+			_bg_sprite.centered = true
+			_bg_sprite.z_index  = -100
+			add_child(_bg_sprite)
+		_bg_sprite.texture  = load(bg_img)
+		var tex_size        := _bg_sprite.texture.get_size()
+		var s               := maxf(_vp_size.x / tex_size.x, _vp_size.y / tex_size.y) * 1.0
+		_bg_sprite.scale    = Vector2(s, s)
+		_bg_sprite.position = _vp_size * 0.5
+		_bg_sprite.visible  = true
 	else:
-		var c: Array = data.get("background_color", [0.69, 0.82, 0.89])
-		_bg.color   = Color(c[0], c[1], c[2], 1.0)
-		_bg.visible = true
-		if _bg_rect: _bg_rect.visible = false
+		if _bg_sprite: _bg_sprite.visible = false
 
 	# ── Room (sprite, furniture, items, walls) ──
 	if _room:
@@ -176,6 +188,7 @@ func _build(data: Dictionary) -> void:
 	_room.name = "Room"
 	add_child(_room)
 	_room.build(data)
+	_room_brightness = data.get("room_brightness", 0.70)
 
 	# ── Pets ──
 	var floor_pts := _pts(data.get("zones", {}).get("floor", []))
@@ -220,32 +233,32 @@ func _build(data: Dictionary) -> void:
 		_player.name = "Player"
 		_player.position = _v2(player_data.get("position", [0.0, 0.0]))
 		_room._world.add_child(_player)
+	_apply_room_brightness()
 
 func _process(delta: float) -> void:
 	if _night_shader:
+		var ctf := get_viewport().get_canvas_transform()
 		var t := DataManager.game_time_hours
 		var alpha: float
 		if t < 11.0:
 			alpha = 0.0
 		elif t < 13.0:
-			alpha = lerpf(0.0, 0.65, (t - 11.0) / 2.0)
+			alpha = lerpf(0.0, _evening_alpha, (t - 11.0) / 2.0)
 		elif t < 21.0:
-			alpha = 0.65
+			alpha = _evening_alpha
 		else:
-			alpha = lerpf(0.65, 0.0, (t - 21.0) / 3.0)
-		var ctf := get_viewport().get_canvas_transform()
-		_night_shader.set_shader_parameter("overlay_color",     Color(0.04, 0.04, 0.18, alpha))
+			alpha = lerpf(_evening_alpha, 0.0, (t - 21.0) / 3.0)
+		_night_shader.set_shader_parameter("overlay_color", Color(0.03, 0.04, 0.16, alpha))
 		# Scale light radius with canvas zoom so the glow stays the same world-space size
 		_night_shader.set_shader_parameter("light_radius_norm", _base_light_radius * ctf.x.length())
 		var lamps := WallLamp.all_lamps
 		for i in 4:
 			var lamp_uv  := Vector2(-9.0, -9.0)
 			var wall_dir := 0.0
-			if i < lamps.size() and alpha > 0.0:
+			if i < lamps.size():
 				var lamp := lamps[i] as Node2D
 				if lamp and lamp.is_inside_tree() and (lamp as WallLamp).is_on:
 					var wl := lamp as WallLamp
-					# Khi đang drag lamp này, dùng surface hover real-time thay vì meta
 					if _dragging_item == lamp and _drag_current_surface != "":
 						match _drag_current_surface:
 							"wall_left":  wall_dir =  1.0
@@ -270,18 +283,9 @@ func _process(delta: float) -> void:
 	for i in min(_pet_nodes.size(), _pet_labels.size()):
 		var pet := _pet_nodes[i]
 		if not is_instance_valid(pet): continue
-		var h := float(pet.get("hunger"))
-		var t := float(pet.get("thirst"))
-		var e := float(pet.get("energy"))
-		var new_text := pet.name + "  H:%.0f%%  T:%.0f%%  E:%.0f%%" % [h * 100, t * 100, e * 100]
+		var new_text := pet.name
 		if _pet_labels[i].text != new_text:
 			_pet_labels[i].text = new_text
-		if not _hunger_dragging[i]:
-			_hunger_sliders[i].set_value_no_signal(h)
-		if not _thirst_dragging[i]:
-			_thirst_sliders[i].set_value_no_signal(t)
-		if not _energy_dragging[i]:
-			_energy_sliders[i].set_value_no_signal(e)
 
 # ── Pet placement ─────────────────────────────────────────────────────────────
 
@@ -826,8 +830,8 @@ func _on_viewport_size_changed() -> void:
 	_vp_size = get_viewport().get_visible_rect().size
 	if _night_overlay:
 		_night_overlay.size = _vp_size
-	if _bg_rect:
-		_bg_rect.size = _vp_size
+	if _rain_overlay:
+		_rain_overlay.size = _vp_size
 	if _night_shader:
 		_night_shader.set_shader_parameter("viewport_size", _vp_size)
 
@@ -881,9 +885,10 @@ func _build_debug_ui() -> void:
 		DataManager.add_gems(9999))
 	vbox.add_child(max_btn)
 
-	# Time slider
+	# Atmosphere
+	vbox.add_child(HSeparator.new())
 	var time_lbl := Label.new()
-	time_lbl.text = "Time"
+	time_lbl.text = "Time: " + DataManager.game_time_string()
 	time_lbl.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(time_lbl)
 	var time_slider := HSlider.new()
@@ -894,27 +899,36 @@ func _build_debug_ui() -> void:
 	time_slider.value = DataManager.game_time_hours
 	time_slider.value_changed.connect(func(v: float):
 		DataManager.game_time_hours = v
-		time_lbl.text = DataManager.game_time_string())
+		time_lbl.text = "Time: " + DataManager.game_time_string())
 	vbox.add_child(time_slider)
+	_add_shader_slider(vbox, "Night Max", 0.0, 1.0, 0.01, 0.55, "%.2f",
+		func(v: float): _evening_alpha = v)
+	_add_shader_slider(vbox, "Rain",    0.0, 0.5, 0.01, 0.13, "%.2f",
+		func(v: float): if _rain_shader: _rain_shader.set_shader_parameter("rain_opacity", v))
 
-	# Lamp shader debug
+	# Lamp
 	vbox.add_child(HSeparator.new())
-	_add_shader_slider(vbox, "Radius",    0.05, 0.8,    0.01, 0.23,  "%.2f", func(v: float): _base_light_radius = v)
-	_add_shader_slider(vbox, "Y Offset", -100.0, 100.0, 1.0, -49.0,  "%d",   func(v: float): _light_y_offset = v)
-	_add_shader_slider(vbox, "X Offset", -100.0, 100.0, 1.0,  1.0,   "%d",   func(v: float): _light_x_offset = v)
-	_add_shader_slider(vbox, "Intensity",  0.0,  3.0,  0.05,  1.0,   "%.2f", func(v: float): _light_intensity = v, "light_intensity")
-	_add_shader_slider(vbox, "IsoShear",  -1.0,  1.0,  0.05,  0.15,  "%.2f", func(v: float): _iso_shear = v, "iso_shear")
-	_add_shader_slider(vbox, "Feather",    0.0,  1.5,  0.05,  1.0,   "%.2f", func(v: float): _edge_feather = v, "edge_feather")
-
-	vbox.add_child(HSeparator.new())
-	_add_shader_slider(vbox, "Pet SprY", -60.0, 50.0, 1.0, -20.0, "%d",
+	_add_shader_slider(vbox, "Lamp R",  0.05, 0.8,   0.01, 0.23,  "%.2f",
+		func(v: float): _base_light_radius = v)
+	_add_shader_slider(vbox, "Lamp I",  0.0,  3.0,   0.05, 1.0,   "%.2f",
 		func(v: float):
-			for pet in _pet_nodes:
-				if not is_instance_valid(pet): continue
-				var spr := pet.get_node_or_null("Sprite")
-				if spr: spr.position.y = v
-				var shadow := pet.get_node_or_null("ShadowSprite")
-				if shadow: shadow.position.y = v)
+			_light_intensity = v
+			if _night_shader: _night_shader.set_shader_parameter("light_intensity", v))
+	_add_shader_slider(vbox, "Lamp Y", -120.0, 0.0,  1.0, -60.0,  "%d",
+		func(v: float): _light_y_offset = v)
+
+	# Room
+	vbox.add_child(HSeparator.new())
+	_add_shader_slider(vbox, "Room Dim", 0.1, 1.0, 0.01, 0.70, "%.2f",
+		func(v: float):
+			_room_brightness = v
+			_apply_room_brightness())
+	_add_shader_slider(vbox, "Room X", -540.0, 540.0, 1.0, 266.0, "%d",
+		func(v: float): if _room: _room.position.x = v)
+	_add_shader_slider(vbox, "Room Y", -200.0, 1000.0, 1.0, 518.0, "%d",
+		func(v: float): if _room: _room.position.y = v)
+	_add_shader_slider(vbox, "Room S", 0.3, 3.0, 0.01, 1.01, "%.2f",
+		func(v: float): if _room: _room.scale = Vector2(v, v))
 
 	# Player frame preview
 	vbox.add_child(HSeparator.new())
@@ -945,8 +959,7 @@ func _build_debug_ui() -> void:
 				_player.set_physics_process(true))
 		vbox.add_child(sl)
 
-	_make_player_slider.call("Idle Frame",  4, "res://assets/player/player_idle_sheet.png",      5)
-	_make_player_slider.call("Walk Frame",  5, "res://assets/player/player_walk_side_sheet.png", 6)
+	_make_player_slider.call("Walk Frame", 5, "res://assets/player/player_walk_side_sheet.png", 6)
 
 	toggle.pressed.connect(func():
 		if not is_instance_valid(_player): return
@@ -1037,74 +1050,6 @@ func _build_stats_ui(vbox: VBoxContainer) -> void:
 		vbox.add_child(lbl)
 		_pet_labels.append(lbl)
 
-		var h_row := HBoxContainer.new()
-		var h_lbl := Label.new()
-		h_lbl.text = "H"
-		h_lbl.add_theme_font_size_override("font_size", 10)
-		h_row.add_child(h_lbl)
-		var h_slider := HSlider.new()
-		h_slider.min_value = 0.0
-		h_slider.max_value = 1.0
-		h_slider.step      = 0.01
-		h_slider.custom_minimum_size = Vector2(78, 20)
-		h_slider.value = float(pet.get("hunger"))
-		h_row.add_child(h_slider)
-		vbox.add_child(h_row)
-		_hunger_sliders.append(h_slider)
-		_hunger_dragging.append(false)
-
-		var t_row := HBoxContainer.new()
-		var t_lbl := Label.new()
-		t_lbl.text = "T"
-		t_lbl.add_theme_font_size_override("font_size", 10)
-		t_row.add_child(t_lbl)
-		var t_slider := HSlider.new()
-		t_slider.min_value = 0.0
-		t_slider.max_value = 1.0
-		t_slider.step      = 0.01
-		t_slider.custom_minimum_size = Vector2(78, 20)
-		t_slider.value = float(pet.get("thirst"))
-		t_row.add_child(t_slider)
-		vbox.add_child(t_row)
-		_thirst_sliders.append(t_slider)
-		_thirst_dragging.append(false)
-
-		var e_row := HBoxContainer.new()
-		var e_lbl := Label.new()
-		e_lbl.text = "E"
-		e_lbl.add_theme_font_size_override("font_size", 10)
-		e_row.add_child(e_lbl)
-		var e_slider := HSlider.new()
-		e_slider.min_value = 0.0
-		e_slider.max_value = 1.0
-		e_slider.step      = 0.01
-		e_slider.custom_minimum_size = Vector2(78, 20)
-		e_slider.value = float(pet.get("energy"))
-		e_row.add_child(e_slider)
-		vbox.add_child(e_row)
-		_energy_sliders.append(e_slider)
-		_energy_dragging.append(false)
-
-		var idx := i
-		h_slider.drag_started.connect(func(): _hunger_dragging[idx] = true)
-		h_slider.drag_ended.connect(func(_c): _hunger_dragging[idx] = false)
-		h_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "hunger", v))
-
-		t_slider.drag_started.connect(func(): _thirst_dragging[idx] = true)
-		t_slider.drag_ended.connect(func(_c): _thirst_dragging[idx] = false)
-		t_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "thirst", v))
-
-		e_slider.drag_started.connect(func(): _energy_dragging[idx] = true)
-		e_slider.drag_ended.connect(func(_c): _energy_dragging[idx] = false)
-		e_slider.value_changed.connect(func(v: float): _set_pet_stat(idx, "energy", v))
-
-func _set_pet_stat(idx: int, prop: String, v: float) -> void:
-	var pet := _pet_nodes[idx]
-	if not is_instance_valid(pet): return
-	pet.set(prop, v)
-	pet.set("_move_dir",     Vector2.ZERO)
-	pet.set("_wander_timer", 0.0)
-
 func _force_all_pets(anim: String) -> void:
 	for pet in _pet_nodes:
 		if not pet: continue
@@ -1129,6 +1074,20 @@ func _force_all_pets(anim: String) -> void:
 					p.on_drink_completed())
 		elif pet.has_method("force_anim"):
 			pet.force_anim(anim)
+
+func _apply_room_brightness() -> void:
+	if not is_instance_valid(_room): return
+	var b   := _room_brightness
+	var inv := 1.0 / b if b > 0.0 else 1.0
+	_room.modulate = Color(b, b, b, 1.0)
+	# Compensate img2 (Layer_room) back to original brightness
+	var layer_room := _room.get_node_or_null("Layer_room")
+	if layer_room:
+		(layer_room as CanvasItem).modulate = Color(inv, inv, inv, 1.0)
+	# Compensate pets back to original brightness
+	for pet in _pet_nodes:
+		if is_instance_valid(pet):
+			(pet as CanvasItem).modulate = Color(inv, inv, inv, 1.0)
 
 # ── Util ──────────────────────────────────────────────────────────────────────
 

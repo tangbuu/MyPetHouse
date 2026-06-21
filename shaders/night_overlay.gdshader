@@ -52,7 +52,7 @@ void fragment() {
 	no_light *= (1.0 - lamp_hole(SCREEN_UV, light_pos_3, light_dir_3));
 	float influence = clamp((1.0 - no_light) * light_intensity, 0.0, 1.0);
 
-	vec3 warm_col = vec3(0.55, 0.32, 0.03);
+	vec3 warm_col = vec3(1.0, 0.847, 0.659);
 	vec3 col      = mix(overlay_color.rgb, warm_col, influence * 0.75);
 	float alpha   = mix(overlay_color.a, overlay_color.a * 0.08, influence);
 	COLOR = vec4(col, alpha);
