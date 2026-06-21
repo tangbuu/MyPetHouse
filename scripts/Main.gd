@@ -97,7 +97,7 @@ func _ready() -> void:
 
 func _setup_night_overlay() -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = 0   # above world space
+	layer.layer = 2   # above rain (layer 1) and world
 	add_child(layer)
 	_night_overlay = ColorRect.new()
 	_night_overlay.color = Color(1, 1, 1, 1)  # driven entirely by shader
@@ -116,7 +116,7 @@ func _setup_night_overlay() -> void:
 
 func _setup_rain() -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = -1   # behind world space — shows only in gaps around room
+	layer.layer = 1   # above world (room), below night overlay (layer 2)
 	add_child(layer)
 	_rain_overlay = ColorRect.new()
 	_rain_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -277,8 +277,9 @@ func _process(delta: float) -> void:
 		if _hold_timer >= _HOLD_THRESHOLD:
 			_hold_active = false
 			_hold_timer  = 0.0
-			_hud.enter_edit_mode()
-			call_deferred("_try_start_drag", _hold_pos)
+			if not _hold_pos_is_permanent(_hold_pos):
+				_hud.enter_edit_mode()
+				call_deferred("_try_start_drag", _hold_pos)
 
 	for i in min(_pet_nodes.size(), _pet_labels.size()):
 		var pet := _pet_nodes[i]
@@ -601,6 +602,16 @@ func _apply_wall_flip(item: Node2D, surface: String) -> void:
 func _set_item_collision(item: Node2D, enabled: bool) -> void:
 	for shape in item.find_children("*", "CollisionShape2D", true, false):
 		(shape as CollisionShape2D).disabled = not enabled
+
+func _hold_pos_is_permanent(global_pos: Vector2) -> bool:
+	if not _room: return false
+	var local_pos := _room.to_local(global_pos)
+	for item_name in _room.item_names():
+		var node := _room.get_item(item_name) as Node2D
+		if not node: continue
+		if _sprite_hit(node, local_pos):
+			return _room_data.get("items", []).any(func(e): return e.get("name","") == node.name and e.get("permanent", false))
+	return false
 
 func _try_start_drag(global_pos: Vector2) -> void:
 	if not _room: return

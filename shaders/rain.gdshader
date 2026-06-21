@@ -3,8 +3,8 @@ shader_type canvas_item;
 uniform float rain_speed    : hint_range(0.1, 5.0) = 1.8;
 uniform float rain_density  : hint_range(0.0, 1.0) = 0.55;
 uniform float rain_opacity  : hint_range(0.0, 0.6) = 0.13;
-uniform float rain_angle    : hint_range(-0.4, 0.4) = 0.07;
-uniform float streak_length : hint_range(0.01, 0.25) = 0.10;
+uniform float rain_angle    : hint_range(-0.4, 0.4) = 0.18;
+uniform float streak_length : hint_range(0.01, 0.25) = 0.06;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
