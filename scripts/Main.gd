@@ -21,7 +21,7 @@ var _light_intensity    : float = 1.0
 var _iso_shear          : float = 0.15
 var _edge_feather       : float = 1.0
 # Fixed evening ambient — no day/night cycle
-var _evening_alpha : float = 0.55
+var _evening_alpha : float = 0.5
 
 var _edit_mode     : bool    = false
 var _dragging_item : Node2D  = null
@@ -634,6 +634,11 @@ func _try_start_drag(global_pos: Vector2) -> void:
 
 	if not best: return
 
+	# Block drag on permanent fixtures (door, window, etc.)
+	var _items_arr : Array = _room_data.get("items", [])
+	var _is_perm := _items_arr.any(func(e): return e.get("name","") == best.name and e.get("permanent", false))
+	if _is_perm: return
+
 	if _drag_bag_was_open:
 		_hud.close_bag()
 
@@ -716,10 +721,22 @@ func _end_drag() -> void:
 	var bag_was_open := _drag_bag_was_open
 	_drag_bag_was_open = false
 
-	# Drop onto bag panel → return item to bag
+	# Drop onto bag panel → return item to bag (skip if permanent)
 	if _hud.is_bag_panel_hovered(_drag_screen_pos):
-		var is_pending := _dragging_item == _pending_item
 		var item_name  := _dragging_item.name
+		var items_arr  : Array = _room_data.get("items", [])
+		var is_perm    := items_arr.any(func(e): return e.get("name","") == item_name and e.get("permanent", false))
+		if is_perm:
+			# Put it back to original grid position and abort
+			var gs2 := _room.grid_system
+			if gs2 and _drag_origin_surface != "":
+				gs2.place_item(_dragging_item, _drag_origin_surface, _drag_origin_col, _drag_origin_row, _drag_w, _drag_d, _drag_h)
+				_dragging_item.position -= _drag_foot_offset
+			_dragging_item = null; _drag_origin_surface = ""; _drag_origin_col = -1
+			_drag_origin_row = -1; _drag_preferred_surf = ""; _drag_current_surface = ""
+			_hud.exit_edit_mode()
+			return
+		var is_pending := _dragging_item == _pending_item
 		var items : Array = _room_data.get("items", [])
 		_room_data["items"] = items.filter(func(e): return e.get("name", "") != item_name)
 		_room.unregister_item(item_name)
@@ -901,21 +918,10 @@ func _build_debug_ui() -> void:
 		DataManager.game_time_hours = v
 		time_lbl.text = "Time: " + DataManager.game_time_string())
 	vbox.add_child(time_slider)
-	_add_shader_slider(vbox, "Night Max", 0.0, 1.0, 0.01, 0.55, "%.2f",
+	_add_shader_slider(vbox, "Night Max", 0.0, 1.0, 0.01, 0.5, "%.2f",
 		func(v: float): _evening_alpha = v)
 	_add_shader_slider(vbox, "Rain",    0.0, 0.5, 0.01, 0.13, "%.2f",
 		func(v: float): if _rain_shader: _rain_shader.set_shader_parameter("rain_opacity", v))
-
-	# Lamp
-	vbox.add_child(HSeparator.new())
-	_add_shader_slider(vbox, "Lamp R",  0.05, 0.8,   0.01, 0.23,  "%.2f",
-		func(v: float): _base_light_radius = v)
-	_add_shader_slider(vbox, "Lamp I",  0.0,  3.0,   0.05, 1.0,   "%.2f",
-		func(v: float):
-			_light_intensity = v
-			if _night_shader: _night_shader.set_shader_parameter("light_intensity", v))
-	_add_shader_slider(vbox, "Lamp Y", -120.0, 0.0,  1.0, -60.0,  "%d",
-		func(v: float): _light_y_offset = v)
 
 	# Room
 	vbox.add_child(HSeparator.new())
@@ -984,25 +990,11 @@ func _build_debug_ui() -> void:
 	reset_bag_btn.text = "Reset Bag"
 	reset_bag_btn.pressed.connect(func():
 		DataManager.reset_inventory()
-		_room_data["items"] = []
+		var perms : Array = _room_data.get("items", []).filter(func(e): return e.get("permanent", false))
+		_room_data["items"] = perms
 		_save_room_data()
 		get_tree().reload_current_scene())
 	vbox.add_child(reset_bag_btn)
-
-	var anims := [
-		"idle","idle3","idle4","idle6",
-		"walk_side","walk_down","walk_up",
-		"eat",
-		"sleep","sofull","— reset —",
-	]
-	for anim in anims:
-		var btn := Button.new()
-		btn.text = anim
-		btn.custom_minimum_size = Vector2(90, 24)
-		btn.add_theme_font_size_override("font_size", 11)
-		var a: String = anim if anim != "— reset —" else ""
-		btn.pressed.connect(func(): _force_all_pets(a))
-		vbox.add_child(btn)
 
 	call_deferred("_build_stats_ui", vbox)
 
@@ -1111,6 +1103,13 @@ func _collision_center(item: Node2D) -> Vector2:
 		if child is CollisionShape2D:
 			return (child as CollisionShape2D).position
 	return Vector2.ZERO
+
+func _rebuild_grid() -> void:
+	if not is_instance_valid(_room): return
+	if _room.grid_system:
+		_room.grid_system.setup(_room_data)
+	if _room._grid_overlay:
+		_room._grid_overlay.call("setup", _room_data)
 
 func _v2(a: Array) -> Vector2:
 	return Vector2(float(a[0]), float(a[1]))

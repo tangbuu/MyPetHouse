@@ -116,6 +116,7 @@ func reset_inventory() -> void:
 	owned_items = []
 	if FileAccess.file_exists(INVENTORY_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(INVENTORY_PATH))
+	_load_inventory()
 
 func _save_inventory() -> void:
 	var file := FileAccess.open(INVENTORY_PATH, FileAccess.WRITE)

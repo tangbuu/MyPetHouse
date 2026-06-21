@@ -166,7 +166,7 @@ func build(data: Dictionary) -> void:
 	var grid := Node2D.new()
 	grid.name    = "GridOverlay"
 	grid.z_index = 0
-	grid.visible = false
+	grid.visible = true
 	grid.set_script(load("res://scripts/RoomGrid.gd"))
 	add_child(grid)
 	grid.call("setup", data)

@@ -8,5 +8,7 @@
   "5_0_5": ["Window"],
   "3_0_5": ["WallDecoBig"],
   "3_0_3": ["WallDecoMid"],
-  "2_0_2": ["WallLamp"]
+  "2_0_2": ["WallLamp"],
+  "3_0_10": ["Door"],
+  "9_0_10": ["WindowLarge"]
 }

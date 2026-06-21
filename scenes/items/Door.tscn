@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://b5lx3v8hjomjc"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(34, 112)
+
+[node name="Door" type="StaticBody2D" unique_id=1321538890]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1275384699]
+position = Vector2(0, 1)
+rotation = 0.5235988
+shape = SubResource("shape")

@@ -14,111 +14,49 @@
     "floor_cols": 18.0,
     "floor_rows": 18.0,
     "wall_cols": 18.0,
-    "wall_rows": 12.0
+    "wall_rows": 16.0
   },
   "id": "room_1",
   "items": [
     {
-      "grid_col": 0,
-      "grid_row": 7,
-      "grid_surface": "floor",
-      "id": "shelf_1",
-      "name": "shelf_1_i14",
+      "grid_col": 12,
+      "grid_row": 6,
+      "grid_surface": "wall_left",
+      "id": "door_1",
+      "name": "door_1_i3",
+      "permanent": true,
       "position": [
-        -102.3,
-        12.571
+        -212.0,
+        -2.734
       ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Shelf.tscn",
-      "sceneName": "Shelf",
-      "texture": "res://assets/item/shelf/shelf_1.png"
+      "scale_x": -1.0,
+      "scene": "res://scenes/items/Door.tscn",
+      "sceneName": "Door"
     },
     {
-      "grid_col": 0,
-      "grid_row": 0,
-      "grid_surface": "floor",
-      "id": "bed_large_1",
-      "name": "bed_large_1_i19",
+      "grid_col": 4,
+      "grid_row": 3,
+      "grid_surface": "wall_right",
+      "id": "window_large_1",
+      "name": "window_large_1_i4",
+      "permanent": true,
       "position": [
-        0.924,
-        -37.069
+        134.111,
+        -78.792
       ],
       "scale_x": 1.0,
-      "scene": "res://scenes/items/CatBed.tscn",
-      "sceneName": "CatBed",
-      "texture": "res://assets/item/bed_large/bed_large_1.png"
+      "scene": "res://scenes/items/WindowLarge.tscn",
+      "sceneName": "WindowLarge"
     },
     {
-      "grid_col": 6,
-      "grid_row": 9,
-      "grid_surface": "floor",
-      "id": "bowl_food_2",
-      "name": "bowl_food_2_i25",
-      "position": [
-        -40.504,
-        60.761
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Bowl.tscn",
-      "sceneName": "Bowl",
-      "script": "res://scripts/items/FoodBowl.gd",
-      "texture": "res://assets/item/bowl/food/bowl_2.png"
-    },
-    {
-      "grid_col": 15,
-      "grid_row": 9,
-      "grid_surface": "floor",
-      "id": "bowl_water_3",
-      "name": "bowl_water_3_i27",
-      "position": [
-        83.26,
-        127.122
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Bowl.tscn",
-      "sceneName": "Bowl",
-      "script": "res://scripts/items/WaterBowl.gd",
-      "texture": "res://assets/item/bowl/water/bowl_3.png"
-    },
-    {
-      "grid_col": 2,
-      "grid_row": 5,
-      "grid_surface": "floor",
-      "id": "fountain_2",
-      "name": "fountain_2_i28",
-      "position": [
-        -40.43,
-        0.909
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/Fountain.tscn",
-      "sceneName": "Fountain",
-      "texture": "res://assets/item/fountain/fountain_2.png"
-    },
-    {
-      "grid_col": 14,
-      "grid_row": 1,
-      "grid_surface": "floor",
-      "id": "cat_tree_2",
-      "name": "cat_tree_2_i29",
-      "position": [
-        179.373,
-        61.995
-      ],
-      "scale_x": 1.0,
-      "scene": "res://scenes/items/CatTree.tscn",
-      "sceneName": "CatTree",
-      "texture": "res://assets/item/cat_tree/cat_tree_2.png"
-    },
-    {
-      "grid_col": 10,
-      "grid_row": 4,
+      "grid_col": 7,
+      "grid_row": 8,
       "grid_surface": "wall_left",
       "id": "wall_lamp_1",
-      "name": "wall_lamp_1_i31",
+      "name": "wall_lamp_1_i6",
       "position": [
-        -150.556,
-        -76.389
+        -126.444,
+        -71.535
       ],
       "scale_x": -1.0,
       "scene": "res://scenes/items/WallLamp.tscn",
@@ -221,46 +159,46 @@
   "zones": {
     "floor": [
       [
-        1.0,
-        -60.0
+        -2.0,
+        -53.0
       ],
       [
-        -247.0,
-        78.0
+        -282.0,
+        99.0
       ],
       [
-        1.0,
-        206.0
+        10.0,
+        270.0
       ],
       [
-        248.0,
-        78.0
+        282.0,
+        99.0
       ]
     ],
     "wall": [
       [
-        1.0,
-        -229.0
+        -2.0,
+        -244.0
       ],
       [
-        248.0,
-        -97.0
+        282.0,
+        -105.0
       ],
       [
-        248.0,
-        78.0
+        282.0,
+        99.0
       ],
       [
-        1.0,
-        -60.0
+        -2.0,
+        -53.0
       ],
       [
-        -247.0,
-        78.0
+        -282.0,
+        99.0
       ],
       [
-        -247.0,
-        -97.0
+        -282.0,
+        -105.0
       ]
     ]
   }
