@@ -19,6 +19,15 @@ var _world        : Node2D         = null
 var center_world : Vector2:
 	get: return _center.global_position if _center else global_position
 
+var floor_poly_world : PackedVector2Array:
+	get:
+		var out := PackedVector2Array()
+		for v in _floor_zone_local:
+			out.append(to_global(Vector2(float(v[0]), float(v[1]))))
+		return out
+
+var _floor_zone_local : Array = []
+
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		_editor_rebuild()
@@ -75,6 +84,8 @@ func build(data: Dictionary) -> void:
 	grid_system.name = "GridSystem"
 	add_child(grid_system)
 	grid_system.setup(data)
+
+	_floor_zone_local = data.get("zones", {}).get("floor", [])
 
 	# ── World (y_sort container for all items + pets) ─────────────────────────
 	_world = Node2D.new()

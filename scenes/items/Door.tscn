@@ -7,5 +7,4 @@ size = Vector2(34, 112)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1275384699]
 position = Vector2(0, 1)
-rotation = 0.5235988
 shape = SubResource("shape")

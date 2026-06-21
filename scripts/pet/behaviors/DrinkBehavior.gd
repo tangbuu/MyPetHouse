@@ -5,13 +5,21 @@ func _init() -> void:
 	priority = 20.0
 
 func should_activate(pet: Pet) -> bool:
-	return enabled and pet.thirst < pet._cfg.urgency_threshold and pet.water_bowl_has_water()
+	return enabled \
+		and is_instance_valid(pet.water_bowl) \
+		and pet.thirst < pet._cfg.urgency_threshold \
+		and pet.water_bowl_has_water() \
+		and not pet.water_bowl.is_in_use()
 
 func activate(pet: Pet) -> void:
+	if not is_instance_valid(pet.water_bowl):
+		pet._do_natural_behavior(); return
 	var dest     := pet.bowl_arrive_pos(pet.water_bowl)
 	var face_pos := pet.water_bowl.global_position
 	var cb       := func():
-		if not pet.water_bowl_has_water():
+		if not is_instance_valid(pet.water_bowl) \
+				or not pet.water_bowl_has_water() \
+				or pet.water_bowl.is_in_use():
 			pet._do_natural_behavior()
 			return
 		pet.water_bowl.start_drink(pet)

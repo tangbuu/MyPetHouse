@@ -13,6 +13,8 @@ var _night_overlay : ColorRect      = null
 var _night_shader  : ShaderMaterial = null
 var _rain_overlay  : ColorRect      = null
 var _rain_shader   : ShaderMaterial = null
+var _rain_player   : AudioStreamPlayer = null
+var _music_player  : AudioStreamPlayer = null
 var _bg_layer      : CanvasLayer    = null
 var _base_light_radius  : float = 0.23
 var _light_y_offset     : float = -60.0
@@ -93,6 +95,7 @@ func _ready() -> void:
 	add_child(_drag_canvas)
 	_setup_night_overlay()
 	_setup_rain()
+	_setup_music()
 	call_deferred("_build_debug_ui")
 
 func _setup_night_overlay() -> void:
@@ -126,6 +129,31 @@ func _setup_rain() -> void:
 	_rain_shader.shader = load("res://shaders/rain.gdshader")
 	_rain_overlay.material = _rain_shader
 	layer.add_child(_rain_overlay)
+
+	_rain_player = AudioStreamPlayer.new()
+	var stream := load("res://assets/audio/rain_loop.mp3") as AudioStream
+	if stream:
+		(_rain_player as AudioStreamPlayer).stream = stream
+		_rain_player.volume_db = _opacity_to_db(0.13)
+		_rain_player.autoplay = true
+		add_child(_rain_player)
+		# Loop the stream
+		var playback := _rain_player.get_stream_playback()
+		_rain_player.finished.connect(func(): _rain_player.play())
+
+func _opacity_to_db(opacity: float) -> float:
+	# rain_opacity 0.0→silence, 0.5→full; map to -20db→6db
+	return lerp(-20.0, 6.0, clampf(opacity / 0.5, 0.0, 1.0))
+
+func _setup_music() -> void:
+	const MUSIC_PATH := "res://assets/audio/music_loop.mp3"
+	if not ResourceLoader.exists(MUSIC_PATH): return
+	_music_player = AudioStreamPlayer.new()
+	_music_player.stream   = load(MUSIC_PATH)
+	_music_player.volume_db = -18.0
+	_music_player.autoplay  = true
+	add_child(_music_player)
+	_music_player.finished.connect(func(): _music_player.play())
 
 func _setup_camera() -> void:
 	_camera = Camera2D.new()
@@ -215,6 +243,7 @@ func _build(data: Dictionary) -> void:
 		pet.set("food_bowl",  _room.get_item_by_script("FoodBowl"))
 		pet.set("water_bowl", _room.get_item_by_script("WaterBowl"))
 		pet.set("_floor_center", _room.center_world)
+		pet.set("_floor_poly",   _room.floor_poly_world)
 		pet.visible = true
 		_room._world.add_child(pet)
 		pet_nodes.append(pet)
@@ -932,20 +961,9 @@ func _build_debug_ui() -> void:
 	_add_shader_slider(vbox, "Night Max", 0.0, 1.0, 0.01, 0.5, "%.2f",
 		func(v: float): _evening_alpha = v)
 	_add_shader_slider(vbox, "Rain",    0.0, 0.5, 0.01, 0.13, "%.2f",
-		func(v: float): if _rain_shader: _rain_shader.set_shader_parameter("rain_opacity", v))
-
-	# Room
-	vbox.add_child(HSeparator.new())
-	_add_shader_slider(vbox, "Room Dim", 0.1, 1.0, 0.01, 0.70, "%.2f",
 		func(v: float):
-			_room_brightness = v
-			_apply_room_brightness())
-	_add_shader_slider(vbox, "Room X", -540.0, 540.0, 1.0, 266.0, "%d",
-		func(v: float): if _room: _room.position.x = v)
-	_add_shader_slider(vbox, "Room Y", -200.0, 1000.0, 1.0, 518.0, "%d",
-		func(v: float): if _room: _room.position.y = v)
-	_add_shader_slider(vbox, "Room S", 0.3, 3.0, 0.01, 1.01, "%.2f",
-		func(v: float): if _room: _room.scale = Vector2(v, v))
+			if _rain_shader: _rain_shader.set_shader_parameter("rain_opacity", v)
+			if _rain_player: _rain_player.volume_db = _opacity_to_db(v))
 
 	# Player frame preview
 	vbox.add_child(HSeparator.new())

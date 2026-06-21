@@ -62,6 +62,7 @@ var _shadow_mat : ShaderMaterial = null
 
 var _other_pets   : Array   = []
 var _floor_center : Vector2 = Vector2.ZERO
+var _floor_poly   : PackedVector2Array = PackedVector2Array()
 var _behaviors    : Array[PetBehavior] = []  # sorted by priority desc, built in _ready
 var _cfg          : PetConfig                # resolved in _ready; never null
 
@@ -167,7 +168,10 @@ func _add_anim(frames: SpriteFrames, anim: String, dir: String,
 func _is_frozen() -> bool:
 	return _anim_state != AnimState.WALK and _move_dir == Vector2.ZERO
 
-func _change_anim_state(new_state: AnimState) -> void:
+func _change_anim_state(new_state: AnimState, force: bool = false) -> void:
+	# Non-movement animations must finish before switching (unless forced by sequence itself)
+	if not force and PetStateMachine.is_busy(_anim_state):
+		return
 	if debug_log and new_state != _anim_state:
 		print("[%s] State: %s → %s" % [cat_name, AnimState.keys()[_anim_state], AnimState.keys()[new_state]])
 	_anim_state = new_state
@@ -195,15 +199,15 @@ func _on_animation_finished() -> void:
 		AnimState.IDLE_RANDOM:
 			get_tree().create_timer(_cfg.idle_random_next_delay).timeout.connect(func(): _do_natural_behavior())
 		AnimState.EAT_START:
-			_change_anim_state(AnimState.EAT_LOOP)
+			_change_anim_state(AnimState.EAT_LOOP, true)
 		AnimState.EAT_END:
 			_return_after_action()
 		AnimState.DRINK_START:
-			_change_anim_state(AnimState.DRINK_LOOP)
+			_change_anim_state(AnimState.DRINK_LOOP, true)
 		AnimState.DRINK_END:
 			_return_after_action()
 		AnimState.SLEEP_PREPARE:
-			_change_anim_state(AnimState.SLEEPING)
+			_change_anim_state(AnimState.SLEEPING, true)
 		AnimState.SLEEP_DONE:
 			_return_after_action()
 
@@ -257,7 +261,7 @@ func _physics_process(delta: float) -> void:
 	if _anim_state == AnimState.SLEEPING:
 		_sleep_timer -= delta
 		if _sleep_timer <= 0.0:
-			_change_anim_state(AnimState.SLEEP_DONE)
+			_change_anim_state(AnimState.SLEEP_DONE, true)
 	if _is_frozen():
 		velocity = Vector2.ZERO
 		return
@@ -339,9 +343,7 @@ func _do_teleport_sequence(dest: Vector2, cb: Callable) -> void:
 			sprite.flip_h         = face_left
 			_shadow_sprite.flip_h = face_left)
 	tw.tween_property(self, "modulate:a", 1.0, 0.3)               # fade in
-	tw.tween_callback(func(): _change_anim_state(AnimState.IDLE)) # resume idle anim
-	tw.tween_interval(1.0)                                         # idle 1s trước action
-	tw.tween_callback(cb)                                          # bắt đầu ăn/ngủ
+	tw.tween_callback(cb)                                          # bắt đầu ăn/ngủ ngay
 
 ## API gọi từ Behavior — lưu vị trí hiện tại rồi teleport tới item.
 ## face_toward: global_position của item để mèo quay mặt đúng hướng sau khi teleport.
@@ -351,12 +353,9 @@ func begin_action(dest: Vector2, action_cb: Callable, face_toward: Vector2 = Vec
 	_action_face_pos = face_toward
 	_do_teleport_sequence(dest, action_cb)
 
-## Sau khi action kết thúc, teleport về vị trí ngẫu nhiên gần item rồi tiếp tục.
+## Sau khi action kết thúc, teleport về vị trí ngẫu nhiên trong map rồi tiếp tục.
 func _return_after_action() -> void:
-	var angle      := randf() * TAU
-	var dist       := randf_range(20.0, 50.0)
-	var return_pos := _action_item_pos + Vector2(cos(angle), sin(angle)) * dist
-	_do_teleport_sequence(return_pos, func(): _do_natural_behavior())
+	_do_teleport_sequence(_random_point_in_floor(), func(): _do_natural_behavior())
 
 # ── Natural behavior ──────────────────────────────────────────────────────────
 
@@ -364,21 +363,14 @@ func _do_natural_behavior() -> void:
 	if _current_state == PetStateMachine.State.SLEEPING: return
 	if _evaluate_behaviors(): return
 
-	var w := {}
-	# ── Không có target ───────────────────────────────────────────────────────
-	w["idle"]   = 0.3 + _laziness  * 0.2
-	w["wander"] = 0.35 + _curiosity * 0.2
-	# ── Có target ─────────────────────────────────────────────────────────────
-	if food_bowl:  w["eat"]   = 0.15
-	if water_bowl: w["drink"] = 0.15
-	if bed_node:   w["sleep"] = 0.10
+	var w := {
+		"idle":   0.3 + _laziness  * 0.2,
+		"wander": 0.35 + _curiosity * 0.2,
+	}
 
 	match _weighted_pick(w):
 		"idle":   _play_random_idle()
 		"wander": _start_wander(randf_range(1.0, 2.0))
-		"eat":    _do_eat()
-		"drink":  _do_drink()
-		"sleep":  _do_sleep()
 		_:        _play_random_idle()
 
 func _do_eat() -> void:
@@ -429,11 +421,28 @@ func _weighted_pick(weights: Dictionary) -> String:
 
 
 func _start_wander(duration: float) -> void:
-	var random_dir := Vector2(cos(randf() * TAU), sin(randf() * TAU))
-	var to_center  := _floor_center - global_position
-	var center_dir := to_center.normalized() if to_center.length() > 20.0 else random_dir
-	_move_dir     = (random_dir * 0.8 + center_dir * 0.2).normalized()
+	var target := _random_point_in_floor()
+	_move_dir     = (target - global_position).normalized()
 	_wander_timer = duration
+
+func _random_point_in_floor() -> Vector2:
+	if _floor_poly.size() < 3:
+		return _floor_center
+	# Bounding box rejection sampling (floor quad is convex → fast convergence)
+	var min_x := _floor_poly[0].x; var max_x := min_x
+	var min_y := _floor_poly[0].y; var max_y := min_y
+	for v in _floor_poly:
+		min_x = minf(min_x, v.x); max_x = maxf(max_x, v.x)
+		min_y = minf(min_y, v.y); max_y = maxf(max_y, v.y)
+	# Shrink by margin so pet doesn't hug the walls
+	var margin := 40.0
+	min_x += margin; max_x -= margin
+	min_y += margin; max_y -= margin
+	for _i in 20:
+		var p := Vector2(randf_range(min_x, max_x), randf_range(min_y, max_y))
+		if Geometry2D.is_point_in_polygon(p, _floor_poly):
+			return p
+	return _floor_center
 
 
 # ── State handling ────────────────────────────────────────────────────────────
@@ -458,25 +467,25 @@ func go_to_bed() -> void:
 	if bed_node:
 		var sleep_spot := bed_node.get_node_or_null("SleepSpot") as Node2D
 		var dest       := sleep_spot.global_position if sleep_spot else bed_node.global_position
-		begin_action(dest, func(): _change_anim_state(AnimState.SLEEP_PREPARE))
+		begin_action(dest, func(): _change_anim_state(AnimState.SLEEP_PREPARE, true))
 	else:
-		_change_anim_state(AnimState.SLEEP_PREPARE)
+		_change_anim_state(AnimState.SLEEP_PREPARE, true)
 
 # ── Eat ───────────────────────────────────────────────────────────────────────
 
 func eat() -> void:
-	_change_anim_state(AnimState.EAT_START)
+	_change_anim_state(AnimState.EAT_START, true)
 
 func on_eat_completed() -> void:
-	_change_anim_state(AnimState.EAT_END)
+	_change_anim_state(AnimState.EAT_END, true)
 
 # ── Drink ─────────────────────────────────────────────────────────────────────
 
 func drink() -> void:
-	_change_anim_state(AnimState.DRINK_START)
+	_change_anim_state(AnimState.DRINK_START, true)
 
 func on_drink_completed() -> void:
-	_change_anim_state(AnimState.DRINK_END)
+	_change_anim_state(AnimState.DRINK_END, true)
 
 # ── Idle animations ───────────────────────────────────────────────────────────
 

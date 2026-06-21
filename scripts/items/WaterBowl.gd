@@ -15,6 +15,9 @@ func _process(delta: float) -> void:
 	if _drink_timer <= 0.0:
 		_finish_drink()
 
+func is_in_use() -> bool:
+	return _drinking_pet != null and is_instance_valid(_drinking_pet)
+
 func start_drink(pet: Node) -> void:
 	if _drinking_pet: return
 	_drinking_pet = pet

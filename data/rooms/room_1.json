@@ -49,19 +49,81 @@
       "sceneName": "WindowLarge"
     },
     {
-      "grid_col": 7,
-      "grid_row": 8,
+      "grid_col": 6,
+      "grid_row": 9,
       "grid_surface": "wall_left",
       "id": "wall_lamp_1",
       "name": "wall_lamp_1_i6",
       "position": [
-        -126.444,
-        -71.535
+        -103.111,
+        -71.497
       ],
       "scale_x": -1.0,
       "scene": "res://scenes/items/WallLamp.tscn",
       "sceneName": "WallLamp",
       "texture": "res://assets/item/lamp/lamp_sheet.png"
+    },
+    {
+      "grid_col": 16,
+      "grid_row": 14,
+      "grid_surface": "floor",
+      "id": "bowl_food_1",
+      "name": "bowl_food_1_i7",
+      "position": [
+        38.685,
+        218.808
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/FoodBowl.gd",
+      "texture": "res://assets/item/bowl/food/bowl_1.png"
+    },
+    {
+      "grid_col": 16,
+      "grid_row": 12,
+      "grid_surface": "floor",
+      "id": "bowl_water_8",
+      "name": "bowl_water_8_i8",
+      "position": [
+        68.982,
+        199.984
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Bowl.tscn",
+      "sceneName": "Bowl",
+      "script": "res://scripts/items/WaterBowl.gd",
+      "texture": "res://assets/item/bowl/water/bowl_8.png"
+    },
+    {
+      "grid_col": 13,
+      "grid_row": 0,
+      "grid_surface": "floor",
+      "id": "fountain_1",
+      "name": "fountain_1_i9",
+      "position": [
+        203.389,
+        65.618
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/Fountain.tscn",
+      "sceneName": "Fountain",
+      "texture": "res://assets/item/fountain/fountain_1.png"
+    },
+    {
+      "grid_col": 11,
+      "grid_row": 0,
+      "grid_surface": "floor",
+      "id": "cat_tree_3",
+      "name": "cat_tree_3_i11",
+      "position": [
+        171.809,
+        48.671
+      ],
+      "scale_x": 1.0,
+      "scene": "res://scenes/items/CatTree.tscn",
+      "sceneName": "CatTree",
+      "texture": "res://assets/item/cat_tree/cat_tree_3.png"
     }
   ],
   "pets": [
